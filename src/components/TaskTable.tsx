@@ -377,8 +377,9 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
   );
 
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* Header Section - Fixed */}
+      <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-white">All Tasks</h1>
@@ -489,161 +490,166 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
         </div>
       </div>
 
+      {/* Main Content Area - Scrollable */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Main Task Table */}
-        <div className={`${showMCPPanel ? 'flex-1' : 'w-full'} overflow-x-auto`}>
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-              <tr>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white w-8">
-                  <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
-                  Task Name
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
-                  Source
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
-                  Status
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
-                  Priority
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
-                  Progress
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
-                  Estimated
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
-                  Tools
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white w-8">
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTasks.map((task, index) => (
-                <tr 
-                  key={`${task.source}-${task.id}`}
-                  className={`group hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-700 transition-colors duration-150 ${
-                    index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'
-                  }`}
-                >
-                  <td className="py-4 px-6">
+        {/* Task Table - Scrollable */}
+        <div className={`${showMCPPanel ? 'flex-1' : 'w-full'} flex flex-col overflow-hidden`}>
+          <div className="flex-1 overflow-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+                <tr>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white w-8">
                     <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">{task.description}</p>
-                      </div>
-                      <button
-                        onClick={() => setSelectedTask(task)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
-                      >
-                        <Eye className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                      task.source === 'ai' 
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                    }`}>
-                      {task.source === 'ai' ? (
-                        <>
-                          <Brain className="h-3 w-3 mr-1" />
-                          AI
-                        </>
-                      ) : (
-                        <>
-                          <User className="h-3 w-3 mr-1" />
-                          Manual
-                        </>
-                      )}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <select
-                      value={task.status}
-                      onChange={(e) => handleStatusChange(task, e.target.value)}
-                      className={`text-xs font-medium rounded-full border-0 focus:ring-2 focus:ring-blue-500 ${getStatusColor(task.status)}`}
-                    >
-                      <option value="Not Started">Not Started</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Review">Review</option>
-                      <option value="Complete">Complete</option>
-                      <option value="Blocked">Blocked</option>
-                    </select>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center">
-                      {getPriorityIcon(task.priority)}
-                      <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">{task.priority}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${getCompletionPercentage(task)}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {getCompletionPercentage(task)}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                      <span className="text-sm text-gray-900 dark:text-white">{task.estimatedHours}h</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-1">
-                      {task.tools.slice(0, 2).map((tool, toolIndex) => (
-                        <span
-                          key={toolIndex}
-                          className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full"
-                          title={tool.name}
-                        >
-                          {tool.name.substring(0, 3)}
-                        </span>
-                      ))}
-                      {task.tools.length > 2 && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          +{task.tools.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <button className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                  </td>
+                  </th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
+                    Task Name
+                  </th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
+                    Source
+                  </th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
+                    Status
+                  </th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
+                    Priority
+                  </th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
+                    Progress
+                  </th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
+                    Estimated
+                  </th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white">
+                    Tools
+                  </th>
+                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-900 dark:text-white w-8">
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredTasks.map((task, index) => (
+                  <tr 
+                    key={`${task.source}-${task.id}`}
+                    className={`group hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-700 transition-colors duration-150 ${
+                      index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'
+                    }`}
+                  >
+                    <td className="py-4 px-6">
+                      <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-3">
+                        <div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">{task.description}</p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedTask(task)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                        task.source === 'ai' 
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                      }`}>
+                        {task.source === 'ai' ? (
+                          <>
+                            <Brain className="h-3 w-3 mr-1" />
+                            AI
+                          </>
+                        ) : (
+                          <>
+                            <User className="h-3 w-3 mr-1" />
+                            Manual
+                          </>
+                        )}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <select
+                        value={task.status}
+                        onChange={(e) => handleStatusChange(task, e.target.value)}
+                        className={`text-xs font-medium rounded-full border-0 focus:ring-2 focus:ring-blue-500 ${getStatusColor(task.status)}`}
+                      >
+                        <option value="Not Started">Not Started</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Review">Review</option>
+                        <option value="Complete">Complete</option>
+                        <option value="Blocked">Blocked</option>
+                      </select>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center">
+                        {getPriorityIcon(task.priority)}
+                        <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">{task.priority}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${getCompletionPercentage(task)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {getCompletionPercentage(task)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-sm text-gray-900 dark:text-white">{task.estimatedHours}h</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-1">
+                        {task.tools.slice(0, 2).map((tool, toolIndex) => (
+                          <span
+                            key={toolIndex}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full"
+                            title={tool.name}
+                          >
+                            {tool.name.substring(0, 3)}
+                          </span>
+                        ))}
+                        {task.tools.length > 2 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            +{task.tools.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <button className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* MCP Taskmaster Panel */}
+        {/* MCP Taskmaster Panel - Fixed width, scrollable content */}
         {showMCPPanel && (
-          <div className="w-96 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
-            <MCPTaskmasterPanel 
-              prds={prds} 
-              onTaskUpdate={(taskId, updates) => {
-                // Handle task updates from MCP panel
-                console.log('MCP task update:', taskId, updates);
-              }}
-            />
+          <div className="w-96 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4">
+              <MCPTaskmasterPanel 
+                prds={prds} 
+                onTaskUpdate={(taskId, updates) => {
+                  // Handle task updates from MCP panel
+                  console.log('MCP task update:', taskId, updates);
+                }}
+              />
+            </div>
           </div>
         )}
       </div>

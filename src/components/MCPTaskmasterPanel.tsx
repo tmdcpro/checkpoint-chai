@@ -83,155 +83,161 @@ const MCPTaskmasterPanel: React.FC<MCPTaskmasterPanelProps> = ({ prds, onTaskUpd
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-      <div className="flex items-center space-x-3 mb-6">
-        <Brain className="h-6 w-6 text-blue-500" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">MCP Taskmaster</h3>
-        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
-          AI-Powered Task Intelligence
-        </span>
-      </div>
-
-      {/* Project Selection */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Select Project for Analysis
-        </label>
-        <select
-          value={selectedProject}
-          onChange={(e) => setSelectedProject(e.target.value)}
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
-        >
-          <option value="">Choose a project...</option>
-          {prds.map(prd => (
-            <option key={prd.id} value={prd.id}>{prd.title}</option>
-          ))}
-        </select>
-      </div>
-
-      {isLoading && (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Analyzing project data...</p>
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex-shrink-0 mb-6">
+        <div className="flex items-center space-x-3 mb-4">
+          <Brain className="h-6 w-6 text-blue-500" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">MCP Taskmaster</h3>
+          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
+            AI-Powered Task Intelligence
+          </span>
         </div>
-      )}
 
-      {progress && !isLoading && (
-        <div className="space-y-6">
-          {/* Progress Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {progress.progressPercentage}%
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Complete</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {progress.completedTasks}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {progress.inProgressTasks}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">In Progress</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                {progress.estimatedHoursRemaining}h
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Remaining</div>
-            </div>
+        {/* Project Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Select Project for Analysis
+          </label>
+          <select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
+          >
+            <option value="">Choose a project...</option>
+            {prds.map(prd => (
+              <option key={prd.id} value={prd.id}>{prd.title}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Content - Scrollable */}
+      <div className="flex-1 overflow-y-auto space-y-6">
+        {isLoading && (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Analyzing project data...</p>
           </div>
+        )}
 
-          {/* Progress Bar */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Overall Progress
-              </span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {progress.completedTasks} of {progress.totalTasks} tasks
-              </span>
+        {progress && !isLoading && (
+          <>
+            {/* Progress Overview */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
+                <div className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                  {progress.progressPercentage}%
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Complete</div>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
+                <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                  {progress.completedTasks}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Completed</div>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
+                <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                  {progress.inProgressTasks}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">In Progress</div>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
+                <div className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                  {progress.estimatedHoursRemaining}h
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Remaining</div>
+              </div>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
-                style={{ width: `${progress.progressPercentage}%` }}
-              />
-            </div>
-          </div>
 
-          {/* AI Recommendations */}
-          {recommendations.length > 0 && (
+            {/* Progress Bar */}
             <div>
-              <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                <Lightbulb className="h-5 w-5 mr-2 text-yellow-500" />
-                AI Recommendations ({recommendations.length})
-              </h4>
-              <div className="space-y-3">
-                {recommendations.map((rec, index) => (
-                  <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 mt-1">
-                        {getRecommendationIcon(rec.type)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                            {rec.type} Alert
-                          </span>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getSeverityColor(rec.severity)}`}>
-                            {rec.severity}
-                          </span>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Overall Progress
+                </span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {progress.completedTasks} of {progress.totalTasks} tasks
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+                  style={{ width: `${progress.progressPercentage}%` }}
+                />
+              </div>
+            </div>
+
+            {/* AI Recommendations */}
+            {recommendations.length > 0 && (
+              <div>
+                <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                  <Lightbulb className="h-4 w-4 mr-2 text-yellow-500" />
+                  AI Recommendations ({recommendations.length})
+                </h4>
+                <div className="space-y-3">
+                  {recommendations.map((rec, index) => (
+                    <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <div className="flex items-start space-x-2">
+                        <div className="flex-shrink-0 mt-1">
+                          {getRecommendationIcon(rec.type)}
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          {rec.message}
-                        </p>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Affects {rec.taskIds.length} task{rec.taskIds.length !== 1 ? 's' : ''}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                              {rec.type} Alert
+                            </span>
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getSeverityColor(rec.severity)}`}>
+                              {rec.severity}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                            {rec.message}
+                          </p>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Affects {rec.taskIds.length} task{rec.taskIds.length !== 1 ? 's' : ''}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Actions */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
+                Quick Actions
+              </h4>
+              <div className="space-y-2">
+                <button className="w-full flex items-center space-x-2 px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+                  <TrendingUp className="h-4 w-4" />
+                  <span>Generate Report</span>
+                </button>
+                <button className="w-full flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Mark Milestone</span>
+                </button>
+                <button className="w-full flex items-center space-x-2 px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>AI Chat</span>
+                </button>
               </div>
             </div>
-          )}
+          </>
+        )}
 
-          {/* Quick Actions */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-            <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-              Quick Actions
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              <button className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
-                <TrendingUp className="h-4 w-4" />
-                <span>Generate Report</span>
-              </button>
-              <button className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
-                <CheckCircle className="h-4 w-4" />
-                <span>Mark Milestone</span>
-              </button>
-              <button className="flex items-center space-x-2 px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors">
-                <MessageSquare className="h-4 w-4" />
-                <span>AI Chat</span>
-              </button>
-            </div>
+        {!selectedProject && !isLoading && (
+          <div className="text-center py-8">
+            <Brain className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
+              Select a project to see AI-powered insights and recommendations
+            </p>
           </div>
-        </div>
-      )}
-
-      {!selectedProject && !isLoading && (
-        <div className="text-center py-8">
-          <Brain className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 dark:text-gray-400">
-            Select a project to see AI-powered insights and recommendations
-          </p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
