@@ -19,10 +19,12 @@ import {
   Pause,
   Square,
   Brain,
-  User
+  User,
+  Zap
 } from 'lucide-react';
 import { Task, Deliverable } from '../types';
 import MCPTaskmasterPanel from './MCPTaskmasterPanel';
+import LeanStartupSprintManager from './LeanStartupSprintManager';
 
 interface TaskTableProps {
   deliverables: Deliverable[];
@@ -37,6 +39,8 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
   const [filterSource, setFilterSource] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'priority' | 'dueDate' | 'status'>('priority');
   const [showMCPPanel, setShowMCPPanel] = useState(true);
+  const [showLeanSprint, setShowLeanSprint] = useState(false);
+  const [selectedDeliverable, setSelectedDeliverable] = useState<Deliverable | null>(null);
 
   // Sample manual tasks for demonstration
   const manualTasks: Task[] = [
@@ -179,6 +183,11 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
     return Math.round((completedSubtasks / task.subtasks.length) * 100);
   };
 
+  const handleLeanSprintStart = (deliverable: Deliverable) => {
+    setSelectedDeliverable(deliverable);
+    setShowLeanSprint(true);
+  };
+
   const TaskDetailModal = ({ task, onClose }: { task: Task; onClose: () => void }) => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
@@ -203,12 +212,28 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
               )}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          >
-            ×
-          </button>
+          <div className="flex items-center space-x-2">
+            {(task as any).deliverableId && (
+              <button
+                onClick={() => {
+                  const deliverable = deliverables.find(d => d.id === (task as any).deliverableId);
+                  if (deliverable) {
+                    handleLeanSprintStart(deliverable);
+                  }
+                }}
+                className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+              >
+                <Zap className="h-3 w-3" />
+                <span>Lean Sprint</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              ×
+            </button>
+          </div>
         </div>
         
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)] space-y-6">
@@ -358,7 +383,7 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-white">All Tasks</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Manage both AI-generated and manual tasks with intelligent insights
+              Manage tasks with AI insights and Lean Startup methodology
             </p>
           </div>
           
@@ -438,17 +463,29 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
             </select>
           </div>
 
-          <button
-            onClick={() => setShowMCPPanel(!showMCPPanel)}
-            className={`flex items-center space-x-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-              showMCPPanel 
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            <Brain className="h-4 w-4" />
-            <span>AI Insights</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowMCPPanel(!showMCPPanel)}
+              className={`flex items-center space-x-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                showMCPPanel 
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <Brain className="h-4 w-4" />
+              <span>AI Insights</span>
+            </button>
+            
+            {deliverables.length > 0 && (
+              <button
+                onClick={() => handleLeanSprintStart(deliverables[0])}
+                className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+              >
+                <Zap className="h-4 w-4" />
+                <span>Lean Sprint</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -616,6 +653,22 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
         <TaskDetailModal
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
+        />
+      )}
+
+      {/* Lean Startup Sprint Manager */}
+      {showLeanSprint && selectedDeliverable && (
+        <LeanStartupSprintManager
+          deliverable={selectedDeliverable}
+          prd={prds.find(p => p.deliverables?.some((d: any) => d.id === selectedDeliverable.id)) || prds[0]}
+          onClose={() => {
+            setShowLeanSprint(false);
+            setSelectedDeliverable(null);
+          }}
+          onDeliverablesUpdated={(updatedDeliverables) => {
+            // Handle deliverable updates
+            console.log('Deliverables updated:', updatedDeliverables);
+          }}
         />
       )}
     </div>
