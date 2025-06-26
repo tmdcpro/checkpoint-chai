@@ -5,6 +5,7 @@ import TopNavigation from './components/TopNavigation';
 import TaskTable from './components/TaskTable';
 import PRDManager from './components/PRDManager';
 import { Deliverable, Task, PRD } from './types';
+import { mcpTaskmaster } from './services/MCPTaskmasterService';
 
 function App() {
   const [currentView, setCurrentView] = useState<'tasks' | 'prd'>('tasks');
@@ -26,7 +27,19 @@ function App() {
     
     if (savedPrds) {
       try {
-        setPrds(JSON.parse(savedPrds));
+        const loadedPrds = JSON.parse(savedPrds);
+        setPrds(loadedPrds);
+        
+        // Initialize MCP Taskmaster with existing projects
+        loadedPrds.forEach(async (prd: PRD) => {
+          if (prd.deliverables && prd.deliverables.length > 0) {
+            try {
+              await mcpTaskmaster.createProject({ prd });
+            } catch (error) {
+              console.error('Failed to initialize MCP project:', error);
+            }
+          }
+        });
       } catch (error) {
         console.error('Failed to load saved PRDs:', error);
       }
@@ -42,7 +55,7 @@ function App() {
     localStorage.setItem('projectflow-prds', JSON.stringify(prds));
   }, [prds]);
 
-  const handleTasksGenerated = (newDeliverables: Deliverable[]) => {
+  const handleTasksGenerated = async (newDeliverables: Deliverable[]) => {
     console.log('Adding new deliverables:', newDeliverables);
     setDeliverables(prev => [...prev, ...newDeliverables]);
     setCurrentView('tasks'); // Switch to tasks view to show the new tasks
@@ -61,15 +74,29 @@ function App() {
     ));
   };
 
-  const handlePRDImported = (prd: PRD) => {
+  const handlePRDImported = async (prd: PRD) => {
     console.log('PRD imported in App:', prd);
     setPrds(prev => [...prev, prd]);
+    
+    // Initialize in MCP Taskmaster
+    try {
+      await mcpTaskmaster.createProject({ prd });
+    } catch (error) {
+      console.error('Failed to create MCP project:', error);
+    }
   };
 
-  const handlePRDUpdated = (updatedPrd: PRD) => {
+  const handlePRDUpdated = async (updatedPrd: PRD) => {
     setPrds(prev => prev.map(prd => 
       prd.id === updatedPrd.id ? updatedPrd : prd
     ));
+    
+    // Update in MCP Taskmaster
+    try {
+      await mcpTaskmaster.createProject({ prd: updatedPrd });
+    } catch (error) {
+      console.error('Failed to update MCP project:', error);
+    }
   };
 
   const renderCurrentView = () => {
@@ -87,6 +114,7 @@ function App() {
         return (
           <TaskTable 
             deliverables={deliverables}
+            prds={prds}
             onTaskUpdate={handleTaskUpdate}
           />
         );
