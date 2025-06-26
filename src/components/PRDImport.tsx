@@ -42,7 +42,7 @@ const PRDImport: React.FC<PRDImportProps> = ({ onPRDImported, onClose }) => {
 
     try {
       const content = await file.text();
-      console.log('File content:', content); // Debug log
+      console.log('File content:', content.substring(0, 500) + '...'); // Debug log
       const prd = await parsePRDContent(content, file.name);
       console.log('Parsed PRD:', prd); // Debug log
       onPRDImported(prd);
@@ -114,7 +114,7 @@ const PRDImport: React.FC<PRDImportProps> = ({ onPRDImported, onClose }) => {
   };
 
   const parsePRDContent = async (content: string, filename: string): Promise<PRD> => {
-    console.log('Parsing content:', content.substring(0, 200) + '...'); // Debug log
+    console.log('Parsing content length:', content.length); // Debug log
     
     const lines = content.split('\n');
     const prd: PRD = {
@@ -134,21 +134,41 @@ const PRDImport: React.FC<PRDImportProps> = ({ onPRDImported, onClose }) => {
 
     let currentSection = '';
     let currentContent: string[] = [];
+    let inCodeBlock = false;
 
     for (const line of lines) {
       const trimmed = line.trim();
       
-      if (trimmed.startsWith('# ')) {
-        prd.title = trimmed.substring(2);
-      } else if (trimmed.startsWith('## ')) {
+      // Handle code blocks
+      if (trimmed.startsWith('```')) {
+        inCodeBlock = !inCodeBlock;
+        continue;
+      }
+      
+      if (inCodeBlock) {
+        continue; // Skip code block content
+      }
+      
+      // Extract title from first heading
+      if (trimmed.startsWith('# ') && !prd.title.includes('prd-')) {
+        prd.title = trimmed.substring(2).trim();
+        continue;
+      }
+      
+      // Process section headers
+      if (trimmed.startsWith('## ') || trimmed.startsWith('### ')) {
         // Process previous section
         if (currentSection && currentContent.length > 0) {
           processPRDSection(prd, currentSection, currentContent);
         }
         
-        currentSection = trimmed.substring(3).toLowerCase();
+        currentSection = trimmed.replace(/^#+\s*/, '').toLowerCase();
         currentContent = [];
-      } else if (trimmed) {
+        continue;
+      }
+      
+      // Collect content for current section
+      if (trimmed && !trimmed.startsWith('#')) {
         currentContent.push(trimmed);
       }
     }
@@ -158,14 +178,77 @@ const PRDImport: React.FC<PRDImportProps> = ({ onPRDImported, onClose }) => {
       processPRDSection(prd, currentSection, currentContent);
     }
 
-    // Ensure we have at least some basic content
-    if (!prd.description && currentContent.length > 0) {
-      prd.description = currentContent.join(' ');
+    // Enhanced content extraction for complex PRDs
+    if (!prd.description && content.length > 100) {
+      // Extract description from content
+      const descriptionMatch = content.match(/(?:description|overview|summary)[:\s]*([^#\n]*(?:\n[^#\n]*)*)/i);
+      if (descriptionMatch) {
+        prd.description = descriptionMatch[1].trim().substring(0, 500);
+      } else {
+        // Use first substantial paragraph
+        const paragraphs = content.split('\n\n').filter(p => p.trim().length > 50);
+        if (paragraphs.length > 0) {
+          prd.description = paragraphs[0].trim().substring(0, 500);
+        }
+      }
     }
 
-    // If no objectives found, create some from the content
+    // Extract objectives from various patterns
+    if (prd.objectives.length === 0) {
+      const objectivePatterns = [
+        /(?:objectives?|goals?|requirements?)[:\s]*\n((?:[-*]\s*[^\n]+\n?)+)/gi,
+        /(?:mvp|features?)[:\s]*\n((?:[-*]\s*[^\n]+\n?)+)/gi,
+        /(?:\d+\.)\s*([^\n]+)/g
+      ];
+      
+      for (const pattern of objectivePatterns) {
+        const matches = content.match(pattern);
+        if (matches) {
+          matches.forEach(match => {
+            const objectives = match.split('\n')
+              .filter(line => line.trim().match(/^[-*\d]/))
+              .map(line => line.replace(/^[-*\d.\s]+/, '').trim())
+              .filter(obj => obj.length > 10);
+            prd.objectives.push(...objectives);
+          });
+          if (prd.objectives.length > 0) break;
+        }
+      }
+    }
+
+    // Extract technical specifications and features
+    const techSections = ['technical specifications', 'features', 'functionality', 'requirements'];
+    for (const section of techSections) {
+      const regex = new RegExp(`${section}[:\\s]*([^#]*?)(?=##|$)`, 'gi');
+      const match = content.match(regex);
+      if (match) {
+        const features = match[0].split('\n')
+          .filter(line => line.trim().match(/^[-*]/))
+          .map(line => line.replace(/^[-*\s]+/, '').trim())
+          .filter(feature => feature.length > 10);
+        
+        if (features.length > 0) {
+          prd.objectives.push(...features.slice(0, 10)); // Limit to prevent overflow
+          break;
+        }
+      }
+    }
+
+    // Ensure we have at least some basic content
+    if (prd.objectives.length === 0) {
+      // Extract from bullet points anywhere in document
+      const bulletPoints = content.match(/^[-*]\s+(.+)$/gm);
+      if (bulletPoints) {
+        prd.objectives = bulletPoints
+          .map(point => point.replace(/^[-*]\s+/, '').trim())
+          .filter(obj => obj.length > 10)
+          .slice(0, 8);
+      }
+    }
+
+    // Final fallback
     if (prd.objectives.length === 0 && prd.description) {
-      prd.objectives = [`Complete project: ${prd.title}`];
+      prd.objectives = [`Implement ${prd.title}`];
     }
 
     console.log('Final parsed PRD:', prd); // Debug log
@@ -174,76 +257,108 @@ const PRDImport: React.FC<PRDImportProps> = ({ onPRDImported, onClose }) => {
 
   const processPRDSection = (prd: PRD, section: string, content: string[]) => {
     const text = content.join('\n');
+    const cleanContent = content.filter(line => line.trim());
     
-    console.log(`Processing section: ${section}`, content); // Debug log
+    console.log(`Processing section: ${section}`, cleanContent.slice(0, 3)); // Debug log
     
-    switch (section) {
-      case 'description':
-      case 'overview':
-      case 'summary':
-        prd.description = text;
-        break;
-      case 'objectives':
-      case 'goals':
-      case 'requirements':
-        const objectives = content.filter(line => line.startsWith('- ') || line.startsWith('* ') || line.match(/^\d+\./))
-          .map(line => line.replace(/^[-*]\s*/, '').replace(/^\d+\.\s*/, ''));
-        if (objectives.length > 0) {
-          prd.objectives = objectives;
-        } else {
-          // If no bullet points, treat each line as an objective
-          prd.objectives = content.filter(line => line.trim());
+    // Normalize section names
+    const normalizedSection = section.toLowerCase()
+      .replace(/[^a-z\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    switch (true) {
+      case normalizedSection.includes('description') || 
+           normalizedSection.includes('overview') || 
+           normalizedSection.includes('summary') ||
+           normalizedSection.includes('executive summary'):
+        if (!prd.description) {
+          prd.description = text.substring(0, 1000);
         }
         break;
-      case 'scope':
+        
+      case normalizedSection.includes('objective') ||
+           normalizedSection.includes('goal') ||
+           normalizedSection.includes('requirement') ||
+           normalizedSection.includes('feature') ||
+           normalizedSection.includes('mvp') ||
+           normalizedSection.includes('deliverable'):
+        const objectives = extractListItems(cleanContent);
+        if (objectives.length > 0) {
+          prd.objectives.push(...objectives);
+        }
+        break;
+        
+      case normalizedSection.includes('scope'):
         prd.scope = text;
         break;
-      case 'timeline':
-      case 'schedule':
-      case 'duration':
+        
+      case normalizedSection.includes('timeline') ||
+           normalizedSection.includes('schedule') ||
+           normalizedSection.includes('duration'):
         prd.timeline = text;
         break;
-      case 'stakeholders':
-      case 'team':
-      case 'people':
-        const stakeholders = content.filter(line => line.startsWith('- ') || line.startsWith('* '))
-          .map(line => line.replace(/^[-*]\s*/, ''));
+        
+      case normalizedSection.includes('stakeholder') ||
+           normalizedSection.includes('team') ||
+           normalizedSection.includes('people') ||
+           normalizedSection.includes('role'):
+        const stakeholders = extractListItems(cleanContent);
         if (stakeholders.length > 0) {
-          prd.stakeholders = stakeholders;
-        } else {
-          prd.stakeholders = content.filter(line => line.trim());
+          prd.stakeholders.push(...stakeholders);
         }
         break;
-      case 'success criteria':
-      case 'acceptance criteria':
-      case 'success':
-      case 'criteria':
-        const criteria = content.filter(line => line.startsWith('- ') || line.startsWith('* '))
-          .map(line => line.replace(/^[-*]\s*/, ''));
+        
+      case normalizedSection.includes('success') ||
+           normalizedSection.includes('acceptance') ||
+           normalizedSection.includes('criteria') ||
+           normalizedSection.includes('metric'):
+        const criteria = extractListItems(cleanContent);
         if (criteria.length > 0) {
-          prd.successCriteria = criteria;
-        } else {
-          prd.successCriteria = content.filter(line => line.trim());
+          prd.successCriteria.push(...criteria);
         }
         break;
-      case 'risks':
-      case 'challenges':
-      case 'issues':
-        const risks = content.filter(line => line.startsWith('- ') || line.startsWith('* '))
-          .map(line => line.replace(/^[-*]\s*/, ''));
+        
+      case normalizedSection.includes('risk') ||
+           normalizedSection.includes('challenge') ||
+           normalizedSection.includes('issue') ||
+           normalizedSection.includes('concern'):
+        const risks = extractListItems(cleanContent);
         if (risks.length > 0) {
-          prd.risks = risks;
-        } else {
-          prd.risks = content.filter(line => line.trim());
+          prd.risks.push(...risks);
         }
         break;
+        
       default:
-        // If we don't recognize the section, add it to description
-        if (!prd.description) {
-          prd.description = text;
+        // If we don't recognize the section but it has good content, add to objectives
+        if (cleanContent.length > 0 && prd.objectives.length < 10) {
+          const items = extractListItems(cleanContent);
+          if (items.length > 0) {
+            prd.objectives.push(...items.slice(0, 5));
+          }
         }
         break;
     }
+  };
+
+  const extractListItems = (content: string[]): string[] => {
+    const items: string[] = [];
+    
+    for (const line of content) {
+      // Match various list formats
+      const listMatch = line.match(/^(?:[-*+]|\d+\.)\s*(.+)$/);
+      if (listMatch) {
+        const item = listMatch[1].trim();
+        if (item.length > 5) {
+          items.push(item);
+        }
+      } else if (line.length > 10 && !line.includes(':') && items.length < 3) {
+        // Include standalone lines that look like objectives
+        items.push(line.trim());
+      }
+    }
+    
+    return items;
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -414,32 +529,22 @@ const PRDImport: React.FC<PRDImportProps> = ({ onPRDImported, onClose }) => {
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                   className="w-full h-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                  placeholder="# Project Title
+                  placeholder="# CryptoTrader Pro - Project Requirements
 
 ## Description
-Brief description of the project...
+A comprehensive cryptocurrency algorithmic trading platform...
 
 ## Objectives
-- Objective 1
-- Objective 2
+- Implement user authentication system
+- Build real-time market data integration
+- Create visual strategy builder
+- Develop backtesting engine
 
-## Scope
-Project scope details...
-
-## Timeline
-Project timeline...
-
-## Stakeholders
-- Stakeholder 1
-- Stakeholder 2
-
-## Success Criteria
-- Criteria 1
-- Criteria 2
-
-## Risks
-- Risk 1
-- Risk 2"
+## Technical Specifications
+- WebSocket connections for real-time data
+- PostgreSQL for user data
+- InfluxDB for time-series data
+- React frontend with TypeScript"
                 />
               </div>
               <button
