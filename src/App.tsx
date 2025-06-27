@@ -4,11 +4,12 @@ import Sidebar from './components/Sidebar';
 import TopNavigation from './components/TopNavigation';
 import TaskTable from './components/TaskTable';
 import PRDManager from './components/PRDManager';
+import GraphDashboard from './components/GraphDashboard';
 import { Deliverable, Task, PRD } from './types';
 import { mcpTaskmaster } from './services/MCPTaskmasterService';
 
 function App() {
-  const [currentView, setCurrentView] = useState<'tasks' | 'prd'>('tasks');
+  const [currentView, setCurrentView] = useState<'tasks' | 'prd' | 'graph'>('tasks');
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [prds, setPrds] = useState<PRD[]>([]);
 
@@ -108,6 +109,13 @@ function App() {
             onPRDImported={handlePRDImported}
             onPRDUpdated={handlePRDUpdated}
             onTasksGenerated={handleTasksGenerated} 
+          />
+        );
+      case 'graph':
+        return (
+          <GraphDashboard
+            prds={prds}
+            deliverables={deliverables}
           />
         );
       default:

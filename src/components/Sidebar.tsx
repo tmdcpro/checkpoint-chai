@@ -10,12 +10,14 @@ import {
   ChevronRight,
   Plus,
   Brain,
-  TrendingUp
+  TrendingUp,
+  Network,
+  GitBranch
 } from 'lucide-react';
 
 interface SidebarProps {
   currentView: string;
-  onViewChange: (view: 'tasks' | 'prd') => void;
+  onViewChange: (view: 'tasks' | 'prd' | 'graph') => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
@@ -37,6 +39,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
       label: 'PRD Manager', 
       active: currentView === 'prd',
       onClick: () => onViewChange('prd')
+    },
+    { 
+      icon: Network, 
+      label: 'Graph Visualization', 
+      active: currentView === 'graph',
+      onClick: () => onViewChange('graph')
     },
     { 
       icon: Target, 
@@ -106,6 +114,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
               {item.label === 'Tasks' && (
                 <TrendingUp className="ml-auto h-4 w-4 text-green-500" />
               )}
+              {item.label === 'Graph Visualization' && (
+                <GitBranch className="ml-auto h-4 w-4 text-purple-500" />
+              )}
             </button>
           ))}
         </nav>
@@ -130,7 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
                 BML
               </span>
             </button>
-            <button className="group flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-150 w-full text-left">
+            <button className="group flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark: text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-150 w-full text-left">
               <div className="flex items-center">
                 <span className="mr-3 text-base">🔬</span>
                 Validation Lab
@@ -146,6 +157,47 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
               </div>
               <span className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 px-2 py-1 rounded-full">
                 Data
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Graph Visualization Features */}
+        <div className="mt-8 px-3">
+          <div className="flex items-center justify-between px-3 py-2">
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Graph Analytics
+            </h3>
+            <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 rounded-full">
+              Beta
+            </span>
+          </div>
+          <div className="space-y-1 mt-2">
+            <button className="group flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-150 w-full text-left">
+              <div className="flex items-center">
+                <span className="mr-3 text-base">🕸️</span>
+                Dependency Graph
+              </div>
+              <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-full">
+                Live
+              </span>
+            </button>
+            <button className="group flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-150 w-full text-left">
+              <div className="flex items-center">
+                <span className="mr-3 text-base">🌳</span>
+                Version Tree
+              </div>
+              <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded-full">
+                Git
+              </span>
+            </button>
+            <button className="group flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-150 w-full text-left">
+              <div className="flex items-center">
+                <span className="mr-3 text-base">📈</span>
+                Analytics View
+              </div>
+              <span className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 px-2 py-1 rounded-full">
+                AI
               </span>
             </button>
           </div>
