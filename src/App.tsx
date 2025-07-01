@@ -5,6 +5,7 @@ import TopNavigation from './components/TopNavigation';
 import TaskTable from './components/TaskTable';
 import PRDManager from './components/PRDManager';
 import GraphDashboard from './components/GraphDashboard';
+import { ExternalLink } from 'lucide-react';
 import { Deliverable, Task, PRD } from './types';
 import { mcpTaskmaster } from './services/MCPTaskmasterService';
 
@@ -131,11 +132,27 @@ function App() {
 
   return (
     <ThemeProvider>
-      <div className="flex h-screen bg-white dark:bg-gray-900">
+      <div className="flex h-screen bg-white dark:bg-gray-900 overflow-hidden">
         <Sidebar currentView={currentView} onViewChange={setCurrentView} />
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0">
           <TopNavigation />
-          {renderCurrentView()}
+          <div className="flex-1 overflow-hidden">
+            {renderCurrentView()}
+          </div>
+        </div>
+        
+        {/* Built with Bolt Badge */}
+        <div className="fixed bottom-4 right-4 z-50">
+          <a
+            href="https://bolt.new"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-sm font-medium"
+          >
+            <span className="text-lg">⚡</span>
+            <span>Built with Bolt</span>
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </div>
       </div>
     </ThemeProvider>

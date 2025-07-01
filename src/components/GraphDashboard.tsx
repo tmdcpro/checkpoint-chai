@@ -403,7 +403,7 @@ const GraphDashboard: React.FC<GraphDashboardProps> = ({
   });
 
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 ${className}`}>
+    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden ${className}`}>
       {/* Header */}
       <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
@@ -482,7 +482,7 @@ const GraphDashboard: React.FC<GraphDashboardProps> = ({
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
         {/* Graph Visualization */}
         <div className="flex-1 relative">
           {/* Toolbar */}

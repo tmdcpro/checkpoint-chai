@@ -377,7 +377,7 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header Section - Fixed */}
       <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="flex items-center justify-between mb-4">
@@ -491,9 +491,9 @@ const TaskTable: React.FC<TaskTableProps> = ({ deliverables, prds, onTaskUpdate 
       </div>
 
       {/* Main Content Area - Scrollable */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex min-h-0">
         {/* Task Table - Scrollable */}
-        <div className={`${showMCPPanel ? 'flex-1' : 'w-full'} flex flex-col overflow-hidden`}>
+        <div className={`${showMCPPanel ? 'flex-1' : 'w-full'} flex flex-col min-h-0`}>
           <div className="flex-1 overflow-auto">
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">

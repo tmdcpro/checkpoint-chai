@@ -168,7 +168,7 @@ ${deliverable.tasks.map(task => `
   console.log('Current PRDs in manager:', prds);
 
   return (
-    <div className="flex-1 p-6 overflow-auto">
+    <div className="h-full p-6 overflow-auto">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
