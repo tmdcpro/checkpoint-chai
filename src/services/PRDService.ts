@@ -385,6 +385,70 @@ export class PRDService {
   }
 
   /**
+   * Generate a fallback task when no specific templates are found
+   */
+  private generateFallbackTask(feature: any): Task {
+    return {
+      id: `task-${this.taskIdCounter++}`,
+      title: `Implement ${feature.name}`,
+      description: feature.description,
+      instructions: [
+        `Plan and design ${feature.name} implementation`,
+        'Build core functionality according to requirements',
+        'Test thoroughly to ensure quality and reliability',
+        'Document implementation and usage'
+      ],
+      estimatedHours: feature.complexity === 'Complex' ? 12 : feature.complexity === 'Moderate' ? 8 : 4,
+      priority: feature.priority,
+      status: 'Not Started',
+      dependencies: [],
+      subtasks: this.config.includeDetailedSubtasks ? [
+        {
+          id: `subtask-fallback-${Date.now()}-1`,
+          title: 'Planning and design',
+          description: `Plan implementation approach for ${feature.name}`,
+          completed: false,
+          estimatedMinutes: 90
+        },
+        {
+          id: `subtask-fallback-${Date.now()}-2`,
+          title: 'Core development',
+          description: `Develop main functionality for ${feature.name}`,
+          completed: false,
+          estimatedMinutes: 300
+        },
+        {
+          id: `subtask-fallback-${Date.now()}-3`,
+          title: 'Testing and validation',
+          description: `Test and validate ${feature.name}`,
+          completed: false,
+          estimatedMinutes: 90
+        }
+      ] : [],
+      testingCriteria: this.config.generateTestingCriteria ? {
+        unitTests: [`${feature.name} unit tests`],
+        integrationTests: [`${feature.name} integration tests`],
+        userAcceptanceTests: [feature.testableOutcome],
+        performanceTests: [`${feature.name} performance tests`],
+        securityTests: [`${feature.name} security tests`],
+        accessibilityTests: [`${feature.name} accessibility tests`],
+        manualTests: [`Manual testing of ${feature.name}`]
+      } : {
+        unitTests: [],
+        integrationTests: [],
+        userAcceptanceTests: [],
+        performanceTests: [],
+        securityTests: [],
+        accessibilityTests: [],
+        manualTests: []
+      },
+      tools: [
+        { name: 'Development Environment', purpose: 'Implementation', implementation: feature.name, required: true }
+      ]
+    };
+  }
+
+  /**
    * Get specific task templates for atomic features
    */
   private getAtomicTaskTemplates(feature: any, domain: string): Array<any> {
