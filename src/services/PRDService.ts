@@ -99,7 +99,7 @@ export class PRDService {
     category: string;
     dependencies: string[];
   }> {
-    const features: Array<{
+    let features: Array<{
       id: string;
       name: string;
       description: string;
@@ -116,12 +116,15 @@ export class PRDService {
       features.push(...this.extractCryptoTradingFeatures(prd));
     } else if (domain === 'ecommerce') {
       features.push(...this.extractEcommerceFeatures(prd));
-    } else {
+    }
+    
+    // Always try generic extraction if we don't have enough features
+    if (features.length === 0) {
       features.push(...this.extractGenericFeatures(prd));
     }
 
-    // Limit features based on configuration
-    const maxFeatures = Math.min(features.length, prd.objectives.length * this.config.maxDeliverablesPerObjective);
+    // Ensure we have at least some features, limit to maximum configured
+    const maxFeatures = Math.min(features.length, this.config.maxDeliverablesPerObjective * Math.max(1, prd.objectives.length));
     
     return features
       .slice(0, maxFeatures)
@@ -256,7 +259,10 @@ export class PRDService {
   private extractGenericFeatures(prd: PRD): Array<any> {
     const features = [];
     
-    prd.objectives.slice(0, this.config.maxDeliverablesPerObjective).forEach((objective, index) => {
+    // Generate features from all objectives, up to the maximum
+    const objectivesToProcess = prd.objectives.slice(0, this.config.maxDeliverablesPerObjective);
+    
+    objectivesToProcess.forEach((objective, index) => {
       const feature = {
         name: this.extractAtomicFeatureName(objective),
         description: `Implement ${objective}`,
@@ -270,6 +276,20 @@ export class PRDService {
       
       features.push(feature);
     });
+
+    // If no objectives exist, create a basic setup feature
+    if (features.length === 0 && prd.objectives.length === 0) {
+      features.push({
+        name: 'Project Setup',
+        description: `Set up basic ${prd.title} application`,
+        userValue: 'Users can access the basic application',
+        testableOutcome: 'Application loads successfully and displays main interface',
+        priority: 'Critical' as const,
+        complexity: 'Simple' as const,
+        category: 'Setup',
+        dependencies: []
+      });
+    }
 
     return features;
   }
@@ -287,7 +307,11 @@ export class PRDService {
     features.forEach((feature, index) => {
       const tasks = this.generateAtomicTasks(feature, domain);
       
-      if (tasks.length === 0) return; // Skip if no tasks generated
+      // Ensure every feature gets at least one task
+      if (tasks.length === 0) {
+        const fallbackTask = this.generateFallbackTask(feature);
+        tasks.push(fallbackTask);
+      }
 
       const deliverable: Deliverable = {
         id: feature.id,
@@ -327,7 +351,7 @@ export class PRDService {
       const taskSignature = `${feature.category}-${template.type}-${template.title}`;
       
       // Skip if we've already generated this type of task
-      if (this.generatedTasks.has(taskSignature)) {
+      if (this.generatedTasks.has(taskSignature) && tasks.length > 0) {
         return;
       }
 
@@ -616,7 +640,58 @@ export class PRDService {
       });
     }
 
-    // Add more category-specific templates as needed...
+    // Generic task templates for any feature category
+    if (templates.length === 0) {
+      templates.push({
+        type: 'implementation',
+        title: `Implement ${feature.name}`,
+        description: feature.description,
+        instructions: [
+          `Analyze requirements for ${feature.name}`,
+          'Design component architecture and data flow',
+          'Implement core functionality with proper error handling',
+          'Add comprehensive testing and documentation',
+          'Optimize performance and user experience'
+        ],
+        estimatedHours: Math.max(4, Math.min(12, feature.complexity === 'Complex' ? 12 : feature.complexity === 'Moderate' ? 8 : 4)),
+        priority: feature.priority,
+        subtasks: [
+          {
+            id: `subtask-${Date.now()}-generic-1`,
+            title: 'Requirements analysis',
+            description: `Analyze and document requirements for ${feature.name}`,
+            completed: false,
+            estimatedMinutes: 60
+          },
+          {
+            id: `subtask-${Date.now()}-generic-2`,
+            title: 'Core implementation',
+            description: `Build main functionality for ${feature.name}`,
+            completed: false,
+            estimatedMinutes: 240
+          },
+          {
+            id: `subtask-${Date.now()}-generic-3`,
+            title: 'Testing and validation',
+            description: `Test and validate ${feature.name} functionality`,
+            completed: false,
+            estimatedMinutes: 120
+          }
+        ],
+        testingCriteria: {
+          unitTests: [`${feature.name} functionality tests`],
+          integrationTests: [`${feature.name} integration tests`],
+          userAcceptanceTests: [feature.testableOutcome],
+          performanceTests: [`${feature.name} performance requirements`],
+          securityTests: [`${feature.name} security validation`],
+          accessibilityTests: [`${feature.name} accessibility compliance`],
+          manualTests: [`Manual testing of ${feature.name}`]
+        },
+        tools: [
+          { name: 'Development Framework', purpose: 'Core development', implementation: feature.name, required: true }
+        ]
+      });
+    }
 
     return templates;
   }
