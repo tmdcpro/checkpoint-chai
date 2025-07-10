@@ -19,10 +19,12 @@ export interface TaskGenerationResult {
 }
 
 /**
- * Enhanced PRD processing service with domain-aware task generation
+ * Enhanced PRD processing service with intelligent task generation
  */
 export class PRDService {
   private config: Required<PRDAnalysisConfig>;
+  private generatedTasks: Set<string> = new Set(); // Track generated tasks to avoid duplicates
+  private taskIdCounter: number = 1;
 
   constructor(config: PRDAnalysisConfig = {}) {
     this.config = {
@@ -32,6 +34,9 @@ export class PRDService {
       generateTestingCriteria: config.generateTestingCriteria ?? true,
       ...config
     };
+    // Reset for each instance
+    this.generatedTasks.clear();
+    this.taskIdCounter = 1;
   }
 
   /**
@@ -40,13 +45,28 @@ export class PRDService {
   async generateTasksFromPRD(prd: PRD): Promise<TaskGenerationResult> {
     console.log('PRDService: Starting enhanced task generation for PRD:', prd.title);
     
-    // Enhanced PRD analysis with domain detection
+    // Reset state for fresh generation
+    this.generatedTasks.clear();
+    this.taskIdCounter = 1;
+    
+    // Enhanced PRD analysis
     const analysis = this.analyzePRD(prd);
     const projectDomain = this.detectProjectDomain(prd);
     
-    // Generate domain-specific deliverables
-    const deliverables = this.generateDomainSpecificDeliverables(prd, analysis, projectDomain);
+    // Extract atomic features from PRD
+    const atomicFeatures = this.extractAtomicFeatures(prd, projectDomain);
     
+    // Generate specific deliverables for each atomic feature
+    const deliverables = this.generateAtomicDeliverables(atomicFeatures, prd, projectDomain);
+    
+    // Add essential infrastructure deliverable if needed
+    if (deliverables.length > 0) {
+      const infraDeliverable = this.generateEssentialInfrastructure(prd, projectDomain);
+      if (infraDeliverable) {
+        deliverables.unshift(infraDeliverable); // Add at beginning
+      }
+    }
+
     const totalTasks = deliverables.reduce((sum, d) => sum + d.tasks.length, 0);
     const estimatedTotalHours = deliverables.reduce((sum, d) => sum + d.estimatedHours, 0);
 
@@ -57,17 +77,797 @@ export class PRDService {
         totalTasks,
         estimatedTotalHours,
         generatedAt: new Date().toISOString(),
-        version: '2.0.0'
+        version: '2.1.0'
       }
     };
 
-    console.log('PRDService: Generated enhanced result:', result);
+    console.log('PRDService: Generated optimized result with', totalTasks, 'unique tasks');
     return result;
   }
 
   /**
-   * Detect the project domain from PRD content
+   * Extract atomic, testable features from PRD objectives
    */
+  private extractAtomicFeatures(prd: PRD, domain: string): Array<{
+    id: string;
+    name: string;
+    description: string;
+    userValue: string;
+    testableOutcome: string;
+    priority: 'Low' | 'Medium' | 'High' | 'Critical';
+    complexity: 'Simple' | 'Moderate' | 'Complex';
+    category: string;
+    dependencies: string[];
+  }> {
+    const features: Array<{
+      id: string;
+      name: string;
+      description: string;
+      userValue: string;
+      testableOutcome: string;
+      priority: 'Low' | 'Medium' | 'High' | 'Critical';
+      complexity: 'Simple' | 'Moderate' | 'Complex';
+      category: string;
+      dependencies: string[];
+    }> = [];
+
+    // Domain-specific feature extraction
+    if (domain === 'cryptocurrency-trading') {
+      features.push(...this.extractCryptoTradingFeatures(prd));
+    } else if (domain === 'ecommerce') {
+      features.push(...this.extractEcommerceFeatures(prd));
+    } else {
+      features.push(...this.extractGenericFeatures(prd));
+    }
+
+    // Limit features based on configuration
+    const maxFeatures = Math.min(features.length, prd.objectives.length * this.config.maxDeliverablesPerObjective);
+    
+    return features
+      .slice(0, maxFeatures)
+      .map((feature, index) => ({
+        ...feature,
+        id: `feature-${index + 1}`,
+      }));
+  }
+
+  /**
+   * Extract crypto trading specific atomic features
+   */
+  private extractCryptoTradingFeatures(prd: PRD): Array<{
+    name: string;
+    description: string;
+    userValue: string;
+    testableOutcome: string;
+    priority: 'Low' | 'Medium' | 'High' | 'Critical';
+    complexity: 'Simple' | 'Moderate' | 'Complex';
+    category: string;
+    dependencies: string[];
+  }> {
+    const features = [];
+    const content = `${prd.title} ${prd.description} ${prd.objectives.join(' ')}`.toLowerCase();
+
+    if (this.containsKeywords(prd, ['auth', 'login', 'account', 'user'])) {
+      features.push({
+        name: 'Secure User Authentication',
+        description: 'Users can securely create accounts and log in to access trading features',
+        userValue: 'Users can safely access their trading account with their credentials',
+        testableOutcome: 'User can register, verify email, log in, and access dashboard within 30 seconds',
+        priority: 'Critical' as const,
+        complexity: 'Moderate' as const,
+        category: 'Authentication',
+        dependencies: []
+      });
+    }
+
+    if (this.containsKeywords(prd, ['market', 'data', 'price', 'real-time', 'feed'])) {
+      features.push({
+        name: 'Live Price Data Display',
+        description: 'Display real-time cryptocurrency prices and market data',
+        userValue: 'Users see up-to-date prices to make informed trading decisions',
+        testableOutcome: 'Price updates within 100ms of market changes, displayed in clear charts',
+        priority: 'Critical' as const,
+        complexity: 'Complex' as const,
+        category: 'Market Data',
+        dependencies: ['feature-1'] // Depends on auth if it exists
+      });
+    }
+
+    if (this.containsKeywords(prd, ['portfolio', 'balance', 'holdings'])) {
+      features.push({
+        name: 'Portfolio Balance Tracking',
+        description: 'Track and display user cryptocurrency holdings and total portfolio value',
+        userValue: 'Users can see their investment performance and current holdings value',
+        testableOutcome: 'Portfolio value calculated correctly and updates when prices change',
+        priority: 'High' as const,
+        complexity: 'Moderate' as const,
+        category: 'Portfolio Management',
+        dependencies: ['feature-1', 'feature-2']
+      });
+    }
+
+    if (this.containsKeywords(prd, ['trade', 'buy', 'sell', 'order'])) {
+      features.push({
+        name: 'Basic Trade Execution',
+        description: 'Execute simple buy and sell orders for cryptocurrencies',
+        userValue: 'Users can buy and sell cryptocurrencies with simple market orders',
+        testableOutcome: 'Order placement completes within 5 seconds, confirmation displayed immediately',
+        priority: 'High' as const,
+        complexity: 'Complex' as const,
+        category: 'Trading',
+        dependencies: ['feature-1', 'feature-2']
+      });
+    }
+
+    if (this.containsKeywords(prd, ['alert', 'notification', 'price'])) {
+      features.push({
+        name: 'Price Alert System',
+        description: 'Set price alerts that notify users when target prices are reached',
+        userValue: 'Users get notified when cryptocurrencies reach their target buy/sell prices',
+        testableOutcome: 'Alert triggers within 30 seconds of price target, notification delivered',
+        priority: 'Medium' as const,
+        complexity: 'Simple' as const,
+        category: 'Alerts',
+        dependencies: ['feature-1', 'feature-2']
+      });
+    }
+
+    return features;
+  }
+
+  /**
+   * Extract ecommerce specific atomic features
+   */
+  private extractEcommerceFeatures(prd: PRD): Array<any> {
+    const features = [];
+
+    if (this.containsKeywords(prd, ['product', 'catalog', 'browse'])) {
+      features.push({
+        name: 'Product Catalog Browsing',
+        description: 'Browse and search through product listings',
+        userValue: 'Users can easily find products they want to purchase',
+        testableOutcome: 'Search returns relevant results in under 2 seconds',
+        priority: 'Critical' as const,
+        complexity: 'Moderate' as const,
+        category: 'Product Discovery',
+        dependencies: []
+      });
+    }
+
+    if (this.containsKeywords(prd, ['cart', 'checkout', 'purchase'])) {
+      features.push({
+        name: 'Shopping Cart & Checkout',
+        description: 'Add products to cart and complete purchase',
+        userValue: 'Users can buy products with a simple checkout process',
+        testableOutcome: 'Complete purchase flow in under 3 minutes',
+        priority: 'Critical' as const,
+        complexity: 'Complex' as const,
+        category: 'Purchase',
+        dependencies: ['feature-1']
+      });
+    }
+
+    return features;
+  }
+
+  /**
+   * Extract generic atomic features from any PRD
+   */
+  private extractGenericFeatures(prd: PRD): Array<any> {
+    const features = [];
+    
+    prd.objectives.slice(0, this.config.maxDeliverablesPerObjective).forEach((objective, index) => {
+      const feature = {
+        name: this.extractAtomicFeatureName(objective),
+        description: `Implement ${objective}`,
+        userValue: this.extractUserValue(objective),
+        testableOutcome: this.generateTestableOutcome(objective),
+        priority: this.determinePriority(objective, index),
+        complexity: this.assessComplexity(objective),
+        category: this.categorizeFeature(objective),
+        dependencies: index > 0 ? [`feature-${index}`] : []
+      };
+      
+      features.push(feature);
+    });
+
+    return features;
+  }
+
+  /**
+   * Generate atomic deliverables for each feature
+   */
+  private generateAtomicDeliverables(
+    features: Array<any>,
+    prd: PRD,
+    domain: string
+  ): Deliverable[] {
+    const deliverables: Deliverable[] = [];
+
+    features.forEach((feature, index) => {
+      const tasks = this.generateAtomicTasks(feature, domain);
+      
+      if (tasks.length === 0) return; // Skip if no tasks generated
+
+      const deliverable: Deliverable = {
+        id: feature.id,
+        title: feature.name,
+        description: feature.description,
+        category: feature.category,
+        priority: feature.priority,
+        estimatedHours: tasks.reduce((sum, task) => sum + task.estimatedHours, 0),
+        dependencies: feature.dependencies.filter(depId => 
+          features.some(f => f.id === depId)
+        ),
+        tasks,
+        successCriteria: this.generateAtomicSuccessCriteria(feature),
+        status: 'Not Started'
+      };
+
+      deliverables.push(deliverable);
+    });
+
+    return deliverables;
+  }
+
+  /**
+   * Generate specific, actionable tasks for an atomic feature
+   */
+  private generateAtomicTasks(feature: any, domain: string): Task[] {
+    const tasks: Task[] = [];
+    const maxTasks = this.config.defaultTasksPerDeliverable;
+
+    // Generate specific tasks based on feature category and complexity
+    const taskTemplates = this.getAtomicTaskTemplates(feature, domain);
+    
+    // Limit to maximum configured tasks
+    const selectedTemplates = taskTemplates.slice(0, maxTasks);
+
+    selectedTemplates.forEach((template, index) => {
+      const taskSignature = `${feature.category}-${template.type}-${template.title}`;
+      
+      // Skip if we've already generated this type of task
+      if (this.generatedTasks.has(taskSignature)) {
+        return;
+      }
+
+      const task: Task = {
+        id: `task-${this.taskIdCounter++}`,
+        title: template.title,
+        description: template.description,
+        instructions: template.instructions,
+        estimatedHours: template.estimatedHours,
+        priority: template.priority,
+        status: 'Not Started',
+        dependencies: index > 0 ? [`task-${this.taskIdCounter - 2}`] : [],
+        subtasks: this.config.includeDetailedSubtasks ? template.subtasks : [],
+        testingCriteria: this.config.generateTestingCriteria ? template.testingCriteria : {
+          unitTests: [],
+          integrationTests: [],
+          userAcceptanceTests: [],
+          performanceTests: [],
+          securityTests: [],
+          accessibilityTests: [],
+          manualTests: []
+        },
+        tools: template.tools
+      };
+
+      tasks.push(task);
+      this.generatedTasks.add(taskSignature);
+    });
+
+    return tasks;
+  }
+
+  /**
+   * Get specific task templates for atomic features
+   */
+  private getAtomicTaskTemplates(feature: any, domain: string): Array<any> {
+    const templates = [];
+
+    if (feature.category === 'Authentication') {
+      templates.push({
+        type: 'backend-auth',
+        title: 'Build Authentication API',
+        description: 'Create secure user registration and login endpoints',
+        instructions: [
+          'Design user database schema with email and password fields',
+          'Implement bcrypt password hashing with salt rounds >= 12',
+          'Create JWT token generation with 15-minute expiry',
+          'Add input validation for email format and password strength',
+          'Implement rate limiting (5 attempts per minute per IP)'
+        ],
+        estimatedHours: 8,
+        priority: 'Critical' as const,
+        subtasks: [
+          {
+            id: `subtask-${Date.now()}-1`,
+            title: 'Database schema setup',
+            description: 'Create users table with proper indexes',
+            completed: false,
+            estimatedMinutes: 60
+          },
+          {
+            id: `subtask-${Date.now()}-2`,
+            title: 'Password hashing implementation',
+            description: 'Implement secure bcrypt hashing',
+            completed: false,
+            estimatedMinutes: 45
+          },
+          {
+            id: `subtask-${Date.now()}-3`,
+            title: 'JWT token system',
+            description: 'Create token generation and validation',
+            completed: false,
+            estimatedMinutes: 90
+          },
+          {
+            id: `subtask-${Date.now()}-4`,
+            title: 'Rate limiting setup',
+            description: 'Implement login attempt rate limiting',
+            completed: false,
+            estimatedMinutes: 45
+          }
+        ],
+        testingCriteria: {
+          unitTests: [
+            'Password hashing function',
+            'JWT token generation',
+            'Input validation functions'
+          ],
+          integrationTests: [
+            'Registration endpoint returns 201 for valid data',
+            'Login endpoint returns JWT for valid credentials',
+            'Rate limiting blocks after 5 failed attempts'
+          ],
+          userAcceptanceTests: [
+            'User can register with valid email and strong password',
+            'User receives JWT token after successful login',
+            'Invalid credentials are rejected with appropriate error'
+          ],
+          performanceTests: [
+            'Registration completes within 2 seconds',
+            'Login completes within 1 second'
+          ],
+          securityTests: [
+            'Password is hashed before storage',
+            'JWT tokens expire after 15 minutes',
+            'SQL injection attacks are prevented'
+          ],
+          accessibilityTests: [],
+          manualTests: [
+            'Test registration flow manually',
+            'Verify JWT token in browser storage'
+          ]
+        },
+        tools: [
+          { name: 'bcrypt', purpose: 'Password hashing', implementation: 'Secure password storage', required: true },
+          { name: 'jsonwebtoken', purpose: 'JWT tokens', implementation: 'User session management', required: true },
+          { name: 'express-rate-limit', purpose: 'Rate limiting', implementation: 'Prevent brute force attacks', required: true }
+        ]
+      });
+
+      templates.push({
+        type: 'frontend-auth',
+        title: 'Build Authentication UI',
+        description: 'Create responsive login and registration forms',
+        instructions: [
+          'Design mobile-first login form with email and password fields',
+          'Add real-time validation feedback (email format, password strength)',
+          'Implement loading states and error message display',
+          'Create registration form with email verification flow',
+          'Add "Remember me" functionality with local storage'
+        ],
+        estimatedHours: 6,
+        priority: 'High' as const,
+        subtasks: [
+          {
+            id: `subtask-${Date.now()}-5`,
+            title: 'Login form component',
+            description: 'Create responsive login form',
+            completed: false,
+            estimatedMinutes: 120
+          },
+          {
+            id: `subtask-${Date.now()}-6`,
+            title: 'Form validation',
+            description: 'Add real-time input validation',
+            completed: false,
+            estimatedMinutes: 90
+          },
+          {
+            id: `subtask-${Date.now()}-7`,
+            title: 'Registration form',
+            description: 'Build user registration interface',
+            completed: false,
+            estimatedMinutes: 90
+          },
+          {
+            id: `subtask-${Date.now()}-8`,
+            title: 'State management',
+            description: 'Implement authentication state handling',
+            completed: false,
+            estimatedMinutes: 60
+          }
+        ],
+        testingCriteria: {
+          unitTests: [
+            'Form validation functions',
+            'Authentication state management',
+            'Input sanitization'
+          ],
+          integrationTests: [
+            'Login form submits to API correctly',
+            'Registration form handles API responses',
+            'Error messages display appropriately'
+          ],
+          userAcceptanceTests: [
+            'User can log in with valid credentials',
+            'Form validation prevents invalid submissions',
+            'Loading states provide clear feedback'
+          ],
+          performanceTests: [
+            'Form renders within 100ms',
+            'Validation feedback appears within 200ms'
+          ],
+          securityTests: [
+            'Password field is properly masked',
+            'Form data is not logged in console',
+            'CSRF protection is implemented'
+          ],
+          accessibilityTests: [
+            'Forms are keyboard navigable',
+            'Screen readers can access all form fields',
+            'Color contrast meets WCAG 2.1 AA standards'
+          ],
+          manualTests: [
+            'Test form on mobile devices',
+            'Verify error message clarity'
+          ]
+        },
+        tools: [
+          { name: 'React Hook Form', purpose: 'Form management', implementation: 'Efficient form handling', required: true },
+          { name: 'Zod', purpose: 'Schema validation', implementation: 'Type-safe input validation', required: true }
+        ]
+      });
+    }
+
+    if (feature.category === 'Market Data') {
+      templates.push({
+        type: 'websocket-integration',
+        title: 'Real-time Price Data Stream',
+        description: 'Connect to cryptocurrency exchange WebSocket for live price feeds',
+        instructions: [
+          'Establish WebSocket connection to Binance or CoinGecko API',
+          'Implement automatic reconnection with exponential backoff',
+          'Parse incoming price data and normalize format',
+          'Store last 100 price points in memory for chart display',
+          'Implement connection health monitoring'
+        ],
+        estimatedHours: 10,
+        priority: 'Critical' as const,
+        subtasks: [
+          {
+            id: `subtask-${Date.now()}-9`,
+            title: 'WebSocket connection',
+            description: 'Establish stable connection to price API',
+            completed: false,
+            estimatedMinutes: 180
+          },
+          {
+            id: `subtask-${Date.now()}-10`,
+            title: 'Data parsing',
+            description: 'Parse and normalize price data',
+            completed: false,
+            estimatedMinutes: 120
+          },
+          {
+            id: `subtask-${Date.now()}-11`,
+            title: 'Reconnection logic',
+            description: 'Implement automatic reconnection',
+            completed: false,
+            estimatedMinutes: 90
+          },
+          {
+            id: `subtask-${Date.now()}-12`,
+            title: 'Health monitoring',
+            description: 'Monitor connection status',
+            completed: false,
+            estimatedMinutes: 60
+          }
+        ],
+        testingCriteria: {
+          unitTests: [
+            'Data parsing functions',
+            'Reconnection logic',
+            'Health check functions'
+          ],
+          integrationTests: [
+            'WebSocket connects successfully',
+            'Price data is received and parsed',
+            'Reconnection works after connection loss'
+          ],
+          userAcceptanceTests: [
+            'Real-time prices update on screen',
+            'Connection remains stable for 24+ hours',
+            'Price data is accurate compared to exchange'
+          ],
+          performanceTests: [
+            'Price updates appear within 100ms',
+            'Memory usage stays under 50MB',
+            'No memory leaks after 24 hours'
+          ],
+          securityTests: [
+            'WebSocket connection uses secure protocol',
+            'API keys are properly protected',
+            'Data integrity is validated'
+          ],
+          accessibilityTests: [],
+          manualTests: [
+            'Test connection stability during market volatility',
+            'Verify price accuracy against multiple sources'
+          ]
+        },
+        tools: [
+          { name: 'ws', purpose: 'WebSocket client', implementation: 'Real-time data connection', required: true },
+          { name: 'axios', purpose: 'HTTP requests', implementation: 'API fallback requests', required: true }
+        ]
+      });
+    }
+
+    // Add more category-specific templates as needed...
+
+    return templates;
+  }
+
+  /**
+   * Generate essential infrastructure deliverable
+   */
+  private generateEssentialInfrastructure(prd: PRD, domain: string): Deliverable | null {
+    const infraTasks = this.generateInfrastructureTasks(domain);
+    
+    if (infraTasks.length === 0) return null;
+
+    return {
+      id: 'infrastructure-foundation',
+      title: 'Development Infrastructure Setup',
+      description: 'Essential project setup and development environment configuration',
+      category: 'Infrastructure',
+      priority: 'Critical',
+      estimatedHours: infraTasks.reduce((sum, task) => sum + task.estimatedHours, 0),
+      dependencies: [],
+      tasks: infraTasks,
+      successCriteria: {
+        measurableMetrics: [
+          {
+            id: 'build-success',
+            name: 'Build Success Rate',
+            description: 'Project builds without errors',
+            type: 'boolean',
+            targetValue: true,
+            unit: '',
+            automated: true,
+            testingMethod: 'Automated build process'
+          }
+        ],
+        qualitativeFactors: [
+          {
+            id: 'dev-experience',
+            name: 'Developer Experience',
+            description: 'Easy setup and development workflow',
+            importance: 'High',
+            evaluationMethod: 'Developer feedback',
+            criteria: ['Quick setup', 'Clear documentation', 'Reliable builds'],
+            maxScore: 10
+          }
+        ],
+        testingRequirements: [
+          'Project builds successfully',
+          'Development server starts without errors',
+          'All dependencies install correctly'
+        ],
+        acceptanceCriteria: [
+          'Any developer can set up project in under 15 minutes',
+          'Build process completes without warnings',
+          'Development server runs on first attempt'
+        ]
+      },
+      status: 'Not Started'
+    };
+  }
+
+  /**
+   * Generate infrastructure tasks with no redundancy
+   */
+  private generateInfrastructureTasks(domain: string): Task[] {
+    const tasks: Task[] = [];
+
+    // Only generate essential, non-redundant infrastructure tasks
+    tasks.push({
+      id: `task-${this.taskIdCounter++}`,
+      title: 'Project Foundation Setup',
+      description: 'Initialize project structure with development tools and configuration',
+      instructions: [
+        'Create project directory structure (src/, public/, etc.)',
+        'Initialize package.json with project metadata',
+        'Configure TypeScript with strict type checking enabled',
+        'Set up ESLint and Prettier for code quality',
+        'Create environment configuration files (.env.example)'
+      ],
+      estimatedHours: 3,
+      priority: 'Critical',
+      status: 'Not Started',
+      dependencies: [],
+      subtasks: this.config.includeDetailedSubtasks ? [
+        {
+          id: `subtask-${Date.now()}-13`,
+          title: 'Directory structure',
+          description: 'Create organized folder structure',
+          completed: false,
+          estimatedMinutes: 30
+        },
+        {
+          id: `subtask-${Date.now()}-14`,
+          title: 'Package configuration',
+          description: 'Set up package.json and dependencies',
+          completed: false,
+          estimatedMinutes: 45
+        },
+        {
+          id: `subtask-${Date.now()}-15`,
+          title: 'TypeScript setup',
+          description: 'Configure TypeScript compiler options',
+          completed: false,
+          estimatedMinutes: 30
+        },
+        {
+          id: `subtask-${Date.now()}-16`,
+          title: 'Code quality tools',
+          description: 'Set up linting and formatting',
+          completed: false,
+          estimatedMinutes: 45
+        }
+      ] : [],
+      testingCriteria: this.config.generateTestingCriteria ? {
+        unitTests: [],
+        integrationTests: [],
+        userAcceptanceTests: [
+          'Project builds without errors',
+          'TypeScript compilation succeeds',
+          'Linting passes with no warnings'
+        ],
+        performanceTests: [
+          'Initial build completes within 30 seconds'
+        ],
+        securityTests: [
+          'No sensitive data in version control',
+          'Environment variables properly configured'
+        ],
+        accessibilityTests: [],
+        manualTests: [
+          'Verify project structure is logical',
+          'Test development server startup'
+        ]
+      } : {
+        unitTests: [],
+        integrationTests: [],
+        userAcceptanceTests: [],
+        performanceTests: [],
+        securityTests: [],
+        accessibilityTests: [],
+        manualTests: []
+      },
+      tools: [
+        { name: 'TypeScript', purpose: 'Type safety', implementation: 'Static type checking', required: true },
+        { name: 'ESLint', purpose: 'Code linting', implementation: 'Code quality enforcement', required: true },
+        { name: 'Prettier', purpose: 'Code formatting', implementation: 'Consistent code style', required: true }
+      ]
+    });
+
+    return tasks;
+  }
+
+  /**
+   * Generate atomic success criteria
+   */
+  private generateAtomicSuccessCriteria(feature: any): any {
+    return {
+      measurableMetrics: [
+        {
+          id: `metric-${feature.id}-functionality`,
+          name: 'Feature Functionality',
+          description: feature.testableOutcome,
+          type: 'boolean',
+          targetValue: true,
+          unit: '',
+          automated: true,
+          testingMethod: 'Automated testing suite'
+        }
+      ],
+      qualitativeFactors: [
+        {
+          id: `qual-${feature.id}-value`,
+          name: 'User Value Delivery',
+          description: feature.userValue,
+          importance: feature.priority,
+          evaluationMethod: 'User testing and feedback',
+          criteria: ['Intuitive interface', 'Fast performance', 'Reliable functionality'],
+          maxScore: 10
+        }
+      ],
+      testingRequirements: [
+        `${feature.name} works as specified`,
+        'Performance meets requirements',
+        'User can complete intended workflow'
+      ],
+      acceptanceCriteria: [
+        feature.testableOutcome,
+        'All automated tests pass',
+        'Code review approved'
+      ]
+    };
+  }
+
+  // Helper methods
+  private containsKeywords(prd: PRD, keywords: string[]): boolean {
+    const content = `${prd.title} ${prd.description} ${prd.objectives.join(' ')}`.toLowerCase();
+    return keywords.some(keyword => content.includes(keyword.toLowerCase()));
+  }
+
+  private extractAtomicFeatureName(objective: string): string {
+    // Extract actionable feature name
+    const cleanedObjective = objective.replace(/^(implement|create|build|develop|add)\s+/i, '');
+    const words = cleanedObjective.split(' ');
+    return words.slice(0, 4).join(' ').replace(/[^a-zA-Z0-9\s]/g, '');
+  }
+
+  private extractUserValue(objective: string): string {
+    return `Users can ${objective.toLowerCase().replace(/^(implement|create|build|develop|add)\s+/i, 'use ')}`;
+  }
+
+  private generateTestableOutcome(objective: string): string {
+    return `Feature completes successfully and provides expected functionality for: ${objective}`;
+  }
+
+  private determinePriority(objective: string, index: number): 'Low' | 'Medium' | 'High' | 'Critical' {
+    const urgentKeywords = ['auth', 'security', 'login', 'critical', 'essential'];
+    const highKeywords = ['core', 'main', 'primary', 'key'];
+    
+    const lower = objective.toLowerCase();
+    
+    if (urgentKeywords.some(keyword => lower.includes(keyword))) return 'Critical';
+    if (index === 0) return 'Critical'; // First objective is usually critical
+    if (highKeywords.some(keyword => lower.includes(keyword)) || index < 2) return 'High';
+    if (index < 4) return 'Medium';
+    return 'Low';
+  }
+
+  private assessComplexity(objective: string): 'Simple' | 'Moderate' | 'Complex' {
+    const complexKeywords = ['integration', 'algorithm', 'real-time', 'advanced', 'machine learning'];
+    const moderateKeywords = ['api', 'database', 'authentication', 'validation'];
+    
+    const lower = objective.toLowerCase();
+    
+    if (complexKeywords.some(keyword => lower.includes(keyword))) return 'Complex';
+    if (moderateKeywords.some(keyword => lower.includes(keyword))) return 'Moderate';
+    return 'Simple';
+  }
+
+  private categorizeFeature(objective: string): string {
+    const lower = objective.toLowerCase();
+    
+    if (lower.includes('auth') || lower.includes('login') || lower.includes('security')) return 'Authentication';
+    if (lower.includes('data') || lower.includes('api') || lower.includes('integration')) return 'Data Integration';
+    if (lower.includes('ui') || lower.includes('interface') || lower.includes('frontend')) return 'User Interface';
+    if (lower.includes('payment') || lower.includes('checkout') || lower.includes('billing')) return 'Payment';
+    if (lower.includes('notification') || lower.includes('alert') || lower.includes('email')) return 'Notifications';
+    if (lower.includes('search') || lower.includes('filter') || lower.includes('browse')) return 'Search & Discovery';
+    
+    return 'Core Functionality';
+  }
+
+  // Existing helper methods (simplified)
   private detectProjectDomain(prd: PRD): string {
     const content = `${prd.title} ${prd.description} ${prd.objectives.join(' ')}`.toLowerCase();
     
@@ -80,1166 +880,10 @@ export class PRDService {
     if (content.includes('social') || content.includes('chat') || content.includes('messaging')) {
       return 'social-platform';
     }
-    if (content.includes('analytics') || content.includes('dashboard') || content.includes('data')) {
-      return 'analytics-platform';
-    }
-    if (content.includes('api') || content.includes('service') || content.includes('backend')) {
-      return 'api-service';
-    }
     
     return 'general-web-app';
   }
 
-  /**
-   * Generate domain-specific deliverables based on PRD content
-   */
-  private generateDomainSpecificDeliverables(
-    prd: PRD, 
-    analysis: ProjectAnalysis, 
-    domain: string
-  ): Deliverable[] {
-    const deliverables: Deliverable[] = [];
-    
-    // Extract key features and components from PRD
-    const keyFeatures = this.extractKeyFeatures(prd, domain);
-    const technicalComponents = this.extractTechnicalComponents(prd, domain);
-    
-    // Generate feature-based deliverables
-    keyFeatures.forEach((feature, index) => {
-      const featureDeliverables = this.generateFeatureDeliverables(feature, index, prd, domain);
-      deliverables.push(...featureDeliverables);
-    });
-    
-    // Generate technical infrastructure deliverables
-    const infraDeliverables = this.generateInfrastructureDeliverables(technicalComponents, prd, domain);
-    deliverables.push(...infraDeliverables);
-    
-    return deliverables;
-  }
-
-  /**
-   * Extract key features from PRD based on domain
-   */
-  private extractKeyFeatures(prd: PRD, domain: string): Array<{
-    name: string;
-    description: string;
-    priority: 'Low' | 'Medium' | 'High' | 'Critical';
-    category: string;
-  }> {
-    const features: Array<{
-      name: string;
-      description: string;
-      priority: 'Low' | 'Medium' | 'High' | 'Critical';
-      category: string;
-    }> = [];
-
-    if (domain === 'cryptocurrency-trading') {
-      // Extract crypto trading specific features
-      if (this.containsKeywords(prd, ['authentication', 'login', 'user', 'account'])) {
-        features.push({
-          name: 'User Authentication System',
-          description: 'Secure user registration, login, and account management with MFA support',
-          priority: 'Critical',
-          category: 'Authentication'
-        });
-      }
-      
-      if (this.containsKeywords(prd, ['market', 'data', 'price', 'chart', 'real-time'])) {
-        features.push({
-          name: 'Real-time Market Data Integration',
-          description: 'Live cryptocurrency price feeds, charts, and market data from multiple exchanges',
-          priority: 'Critical',
-          category: 'Data Integration'
-        });
-      }
-      
-      if (this.containsKeywords(prd, ['strategy', 'algorithm', 'trading', 'builder'])) {
-        features.push({
-          name: 'Visual Strategy Builder',
-          description: 'Drag-and-drop interface for creating algorithmic trading strategies',
-          priority: 'High',
-          category: 'Strategy Development'
-        });
-      }
-      
-      if (this.containsKeywords(prd, ['backtest', 'historical', 'simulation', 'test'])) {
-        features.push({
-          name: 'Backtesting Engine',
-          description: 'Historical strategy testing with comprehensive performance metrics',
-          priority: 'High',
-          category: 'Analysis'
-        });
-      }
-      
-      if (this.containsKeywords(prd, ['paper', 'trading', 'simulation', 'practice'])) {
-        features.push({
-          name: 'Paper Trading Simulator',
-          description: 'Risk-free trading simulation with real market conditions',
-          priority: 'Medium',
-          category: 'Simulation'
-        });
-      }
-      
-      if (this.containsKeywords(prd, ['risk', 'management', 'stop', 'loss', 'position'])) {
-        features.push({
-          name: 'Risk Management System',
-          description: 'Automated risk controls, position sizing, and portfolio protection',
-          priority: 'High',
-          category: 'Risk Management'
-        });
-      }
-    } else {
-      // Generic feature extraction for other domains
-      prd.objectives.forEach((objective, index) => {
-        features.push({
-          name: this.extractFeatureName(objective),
-          description: objective,
-          priority: index < 2 ? 'High' : index < 4 ? 'Medium' : 'Low',
-          category: this.categorizeObjective(objective)
-        });
-      });
-    }
-
-    return features;
-  }
-
-  /**
-   * Extract technical components from PRD
-   */
-  private extractTechnicalComponents(prd: PRD, domain: string): Array<{
-    name: string;
-    description: string;
-    type: string;
-  }> {
-    const components: Array<{
-      name: string;
-      description: string;
-      type: string;
-    }> = [];
-
-    if (domain === 'cryptocurrency-trading') {
-      components.push(
-        {
-          name: 'WebSocket Data Streams',
-          description: 'Real-time cryptocurrency price and market data streaming',
-          type: 'Data Infrastructure'
-        },
-        {
-          name: 'Time-series Database',
-          description: 'High-performance storage for historical market data',
-          type: 'Database'
-        },
-        {
-          name: 'Strategy Execution Engine',
-          description: 'Core engine for executing trading strategies and algorithms',
-          type: 'Business Logic'
-        },
-        {
-          name: 'API Gateway',
-          description: 'Secure API gateway with rate limiting and authentication',
-          type: 'Infrastructure'
-        }
-      );
-    }
-
-    return components;
-  }
-
-  /**
-   * Generate deliverables for a specific feature
-   */
-  private generateFeatureDeliverables(
-    feature: { name: string; description: string; priority: any; category: string },
-    index: number,
-    prd: PRD,
-    domain: string
-  ): Deliverable[] {
-    const deliverables: Deliverable[] = [];
-    
-    // Generate implementation phases for the feature
-    const phases = this.getFeatureImplementationPhases(feature, domain);
-    
-    phases.forEach((phase, phaseIndex) => {
-      const deliverable: Deliverable = {
-        id: `feature-${this.slugify(feature.name)}-${phaseIndex + 1}`,
-        title: `${phase.name}: ${feature.name}`,
-        description: phase.description,
-        category: feature.category,
-        priority: feature.priority,
-        estimatedHours: phase.estimatedHours,
-        dependencies: this.calculatePhaseDependencies(index, phaseIndex, phases.length),
-        tasks: this.generateFeatureTasks(feature, phase, domain),
-        successCriteria: this.generateFeatureSuccessCriteria(feature, phase),
-        status: 'Not Started'
-      };
-      
-      deliverables.push(deliverable);
-    });
-    
-    return deliverables;
-  }
-
-  /**
-   * Get implementation phases for a feature based on domain
-   */
-  private getFeatureImplementationPhases(
-    feature: { name: string; description: string; category: string },
-    domain: string
-  ): Array<{
-    name: string;
-    description: string;
-    estimatedHours: number;
-  }> {
-    if (domain === 'cryptocurrency-trading') {
-      if (feature.category === 'Authentication') {
-        return [
-          {
-            name: 'Backend Authentication',
-            description: 'Implement secure user authentication APIs with JWT tokens and MFA support',
-            estimatedHours: 24
-          },
-          {
-            name: 'Frontend Authentication UI',
-            description: 'Build responsive login/registration forms with security features',
-            estimatedHours: 16
-          }
-        ];
-      }
-      
-      if (feature.category === 'Data Integration') {
-        return [
-          {
-            name: 'Data Pipeline Setup',
-            description: 'Configure real-time data ingestion from cryptocurrency exchanges',
-            estimatedHours: 20
-          },
-          {
-            name: 'Chart Visualization',
-            description: 'Implement interactive candlestick charts with technical indicators',
-            estimatedHours: 28
-          }
-        ];
-      }
-      
-      if (feature.category === 'Strategy Development') {
-        return [
-          {
-            name: 'Strategy Engine Core',
-            description: 'Build the core strategy execution and validation engine',
-            estimatedHours: 32
-          },
-          {
-            name: 'Visual Builder Interface',
-            description: 'Create drag-and-drop strategy builder with condition blocks',
-            estimatedHours: 36
-          }
-        ];
-      }
-      
-      if (feature.category === 'Analysis') {
-        return [
-          {
-            name: 'Backtesting Algorithm',
-            description: 'Implement high-performance backtesting with historical data',
-            estimatedHours: 28
-          },
-          {
-            name: 'Performance Analytics',
-            description: 'Build comprehensive performance metrics and reporting',
-            estimatedHours: 20
-          }
-        ];
-      }
-    }
-    
-    // Default phases for other domains
-    return [
-      {
-        name: 'Backend Implementation',
-        description: `Implement backend services and APIs for ${feature.name}`,
-        estimatedHours: 20
-      },
-      {
-        name: 'Frontend Implementation',
-        description: `Build user interface and interactions for ${feature.name}`,
-        estimatedHours: 16
-      }
-    ];
-  }
-
-  /**
-   * Generate specific tasks for a feature phase
-   */
-  private generateFeatureTasks(
-    feature: { name: string; description: string; category: string },
-    phase: { name: string; description: string; estimatedHours: number },
-    domain: string
-  ): Task[] {
-    const tasks: Task[] = [];
-    const taskTemplates = this.getTaskTemplatesForFeaturePhase(feature, phase, domain);
-    
-    taskTemplates.forEach((template, index) => {
-      const task: Task = {
-        id: `${this.slugify(feature.name)}-${this.slugify(phase.name)}-task-${index + 1}`,
-        title: template.title,
-        description: template.description,
-        instructions: template.instructions,
-        estimatedHours: template.estimatedHours,
-        priority: template.priority,
-        status: 'Not Started',
-        dependencies: index > 0 ? [`${this.slugify(feature.name)}-${this.slugify(phase.name)}-task-${index}`] : [],
-        subtasks: template.subtasks,
-        testingCriteria: template.testingCriteria,
-        tools: template.tools
-      };
-      
-      tasks.push(task);
-    });
-    
-    return tasks;
-  }
-
-  /**
-   * Get task templates for specific feature phases
-   */
-  private getTaskTemplatesForFeaturePhase(
-    feature: { name: string; description: string; category: string },
-    phase: { name: string; description: string; estimatedHours: number },
-    domain: string
-  ): Array<{
-    title: string;
-    description: string;
-    instructions: string[];
-    estimatedHours: number;
-    priority: 'Low' | 'Medium' | 'High' | 'Critical';
-    subtasks: Array<{
-      id: string;
-      title: string;
-      description: string;
-      completed: boolean;
-      estimatedMinutes: number;
-    }>;
-    testingCriteria: any;
-    tools: Array<{
-      name: string;
-      purpose: string;
-      implementation: string;
-      required: boolean;
-    }>;
-  }> {
-    if (domain === 'cryptocurrency-trading') {
-      if (feature.category === 'Authentication' && phase.name === 'Backend Authentication') {
-        return [
-          {
-            title: 'Implement User Registration API',
-            description: 'Create secure user registration endpoint with email verification and password validation',
-            instructions: [
-              'Design user database schema with proper indexing',
-              'Implement password hashing using bcrypt with salt rounds',
-              'Add email verification workflow with secure tokens',
-              'Create input validation and sanitization middleware'
-            ],
-            estimatedHours: 8,
-            priority: 'Critical',
-            subtasks: [
-              {
-                id: 'subtask-1',
-                title: 'Database schema design',
-                description: 'Create users table with proper constraints and indexes',
-                completed: false,
-                estimatedMinutes: 90
-              },
-              {
-                id: 'subtask-2',
-                title: 'Password hashing implementation',
-                description: 'Implement secure password hashing with bcrypt',
-                completed: false,
-                estimatedMinutes: 60
-              },
-              {
-                id: 'subtask-3',
-                title: 'Email verification system',
-                description: 'Build email verification workflow',
-                completed: false,
-                estimatedMinutes: 120
-              },
-              {
-                id: 'subtask-4',
-                title: 'Input validation middleware',
-                description: 'Create comprehensive input validation',
-                completed: false,
-                estimatedMinutes: 90
-              }
-            ],
-            testingCriteria: {
-              unitTests: [
-                'Password hashing and verification',
-                'Email validation logic',
-                'Input sanitization functions'
-              ],
-              integrationTests: [
-                'Registration API endpoint',
-                'Email verification flow',
-                'Database operations'
-              ],
-              userAcceptanceTests: [
-                'User can register with valid email and password',
-                'Email verification link works correctly',
-                'Invalid inputs are properly rejected'
-              ],
-              performanceTests: [
-                'Registration completes within 2 seconds',
-                'Password hashing performance under load'
-              ],
-              securityTests: [
-                'SQL injection prevention',
-                'Password strength enforcement',
-                'Rate limiting on registration attempts'
-              ],
-              accessibilityTests: [],
-              manualTests: [
-                'Manual registration flow testing',
-                'Email delivery verification'
-              ]
-            },
-            tools: [
-              {
-                name: 'bcrypt',
-                purpose: 'Password hashing',
-                implementation: 'Secure password storage with salt',
-                required: true
-              },
-              {
-                name: 'joi',
-                purpose: 'Input validation',
-                implementation: 'Schema-based validation middleware',
-                required: true
-              },
-              {
-                name: 'nodemailer',
-                purpose: 'Email sending',
-                implementation: 'Email verification system',
-                required: true
-              }
-            ]
-          },
-          {
-            title: 'Implement JWT Authentication System',
-            description: 'Build JWT token generation, validation, and refresh token mechanism',
-            instructions: [
-              'Set up JWT token generation with proper claims and expiration',
-              'Implement token validation middleware for protected routes',
-              'Create refresh token mechanism for seamless user experience',
-              'Add token blacklisting for secure logout functionality'
-            ],
-            estimatedHours: 10,
-            priority: 'Critical',
-            subtasks: [
-              {
-                id: 'subtask-1',
-                title: 'JWT token generation',
-                description: 'Implement secure JWT token creation',
-                completed: false,
-                estimatedMinutes: 120
-              },
-              {
-                id: 'subtask-2',
-                title: 'Token validation middleware',
-                description: 'Create middleware for route protection',
-                completed: false,
-                estimatedMinutes: 90
-              },
-              {
-                id: 'subtask-3',
-                title: 'Refresh token system',
-                description: 'Implement automatic token refresh',
-                completed: false,
-                estimatedMinutes: 150
-              },
-              {
-                id: 'subtask-4',
-                title: 'Token blacklisting',
-                description: 'Add secure logout with token invalidation',
-                completed: false,
-                estimatedMinutes: 90
-              }
-            ],
-            testingCriteria: {
-              unitTests: [
-                'JWT token generation and validation',
-                'Refresh token logic',
-                'Token blacklisting functionality'
-              ],
-              integrationTests: [
-                'Protected route access',
-                'Token refresh flow',
-                'Logout and token invalidation'
-              ],
-              userAcceptanceTests: [
-                'User stays logged in across sessions',
-                'Automatic token refresh works seamlessly',
-                'Logout properly invalidates tokens'
-              ],
-              performanceTests: [
-                'Token validation under high load',
-                'Refresh token performance'
-              ],
-              securityTests: [
-                'Token tampering detection',
-                'Expired token rejection',
-                'Blacklisted token validation'
-              ],
-              accessibilityTests: [],
-              manualTests: [
-                'Manual authentication flow testing',
-                'Token expiration handling'
-              ]
-            },
-            tools: [
-              {
-                name: 'jsonwebtoken',
-                purpose: 'JWT token management',
-                implementation: 'Token generation and validation',
-                required: true
-              },
-              {
-                name: 'Redis',
-                purpose: 'Token blacklisting',
-                implementation: 'Fast token invalidation storage',
-                required: true
-              }
-            ]
-          },
-          {
-            title: 'Implement Multi-Factor Authentication',
-            description: 'Add TOTP-based MFA support with backup codes and recovery options',
-            instructions: [
-              'Integrate TOTP library for authenticator app support',
-              'Generate and validate backup recovery codes',
-              'Create MFA enrollment and verification flows',
-              'Add MFA requirement enforcement for sensitive operations'
-            ],
-            estimatedHours: 6,
-            priority: 'High',
-            subtasks: [
-              {
-                id: 'subtask-1',
-                title: 'TOTP integration',
-                description: 'Implement authenticator app support',
-                completed: false,
-                estimatedMinutes: 120
-              },
-              {
-                id: 'subtask-2',
-                title: 'Backup codes system',
-                description: 'Generate and manage recovery codes',
-                completed: false,
-                estimatedMinutes: 90
-              },
-              {
-                id: 'subtask-3',
-                title: 'MFA enrollment flow',
-                description: 'Create user-friendly MFA setup process',
-                completed: false,
-                estimatedMinutes: 90
-              },
-              {
-                id: 'subtask-4',
-                title: 'MFA enforcement',
-                description: 'Require MFA for sensitive operations',
-                completed: false,
-                estimatedMinutes: 60
-              }
-            ],
-            testingCriteria: {
-              unitTests: [
-                'TOTP generation and validation',
-                'Backup code generation and verification',
-                'MFA enforcement logic'
-              ],
-              integrationTests: [
-                'MFA enrollment API',
-                'MFA verification flow',
-                'Backup code usage'
-              ],
-              userAcceptanceTests: [
-                'User can set up MFA with authenticator app',
-                'Backup codes work for account recovery',
-                'MFA is required for sensitive operations'
-              ],
-              performanceTests: [
-                'TOTP validation performance',
-                'MFA flow completion time'
-              ],
-              securityTests: [
-                'TOTP secret protection',
-                'Backup code security',
-                'MFA bypass prevention'
-              ],
-              accessibilityTests: [
-                'MFA setup accessibility',
-                'Screen reader compatibility'
-              ],
-              manualTests: [
-                'Manual MFA setup testing',
-                'Recovery code validation'
-              ]
-            },
-            tools: [
-              {
-                name: 'speakeasy',
-                purpose: 'TOTP implementation',
-                implementation: 'Authenticator app integration',
-                required: true
-              },
-              {
-                name: 'qrcode',
-                purpose: 'QR code generation',
-                implementation: 'MFA setup QR codes',
-                required: true
-              }
-            ]
-          }
-        ];
-      }
-      
-      if (feature.category === 'Data Integration' && phase.name === 'Data Pipeline Setup') {
-        return [
-          {
-            title: 'Integrate Binance WebSocket API',
-            description: 'Establish real-time connection to Binance for live cryptocurrency price feeds',
-            instructions: [
-              'Set up WebSocket connection with automatic reconnection logic',
-              'Implement data parsing and normalization for price feeds',
-              'Add connection health monitoring and error handling',
-              'Create subscription management for multiple trading pairs'
-            ],
-            estimatedHours: 8,
-            priority: 'Critical',
-            subtasks: [
-              {
-                id: 'subtask-1',
-                title: 'WebSocket connection setup',
-                description: 'Establish stable connection to Binance API',
-                completed: false,
-                estimatedMinutes: 120
-              },
-              {
-                id: 'subtask-2',
-                title: 'Data parsing and normalization',
-                description: 'Process incoming price data into standard format',
-                completed: false,
-                estimatedMinutes: 90
-              },
-              {
-                id: 'subtask-3',
-                title: 'Connection monitoring',
-                description: 'Implement health checks and reconnection logic',
-                completed: false,
-                estimatedMinutes: 90
-              },
-              {
-                id: 'subtask-4',
-                title: 'Subscription management',
-                description: 'Handle multiple trading pair subscriptions',
-                completed: false,
-                estimatedMinutes: 60
-              }
-            ],
-            testingCriteria: {
-              unitTests: [
-                'Data parsing functions',
-                'Connection management logic',
-                'Subscription handling'
-              ],
-              integrationTests: [
-                'Binance API connection',
-                'Data flow validation',
-                'Reconnection scenarios'
-              ],
-              userAcceptanceTests: [
-                'Real-time price updates display correctly',
-                'Connection remains stable during market volatility',
-                'Multiple trading pairs update simultaneously'
-              ],
-              performanceTests: [
-                'Data processing latency under 50ms',
-                'Memory usage optimization',
-                'Connection stability under load'
-              ],
-              securityTests: [
-                'API key protection',
-                'Data integrity validation'
-              ],
-              accessibilityTests: [],
-              manualTests: [
-                'Manual connection testing',
-                'Data accuracy verification'
-              ]
-            },
-            tools: [
-              {
-                name: 'ws',
-                purpose: 'WebSocket client',
-                implementation: 'Real-time data connection',
-                required: true
-              },
-              {
-                name: 'binance-api-node',
-                purpose: 'Binance API integration',
-                implementation: 'Exchange data access',
-                required: true
-              }
-            ]
-          }
-        ];
-      }
-    }
-    
-    // Default generic tasks
-    return [
-      {
-        title: `Implement ${feature.name} Core Logic`,
-        description: `Build the core functionality for ${feature.name}`,
-        instructions: [
-          'Design and implement core business logic',
-          'Add proper error handling and validation',
-          'Implement comprehensive logging',
-          'Add performance monitoring'
-        ],
-        estimatedHours: Math.floor(phase.estimatedHours * 0.6),
-        priority: 'High',
-        subtasks: [
-          {
-            id: 'subtask-1',
-            title: 'Core implementation',
-            description: 'Build main functionality',
-            completed: false,
-            estimatedMinutes: Math.floor(phase.estimatedHours * 0.6 * 60 * 0.7)
-          },
-          {
-            id: 'subtask-2',
-            title: 'Error handling',
-            description: 'Add comprehensive error handling',
-            completed: false,
-            estimatedMinutes: Math.floor(phase.estimatedHours * 0.6 * 60 * 0.3)
-          }
-        ],
-        testingCriteria: {
-          unitTests: ['Core functionality tests'],
-          integrationTests: ['Integration with other components'],
-          userAcceptanceTests: ['Feature works as expected'],
-          performanceTests: ['Performance meets requirements'],
-          securityTests: ['Security validation'],
-          accessibilityTests: [],
-          manualTests: ['Manual feature testing']
-        },
-        tools: [
-          {
-            name: 'Development Framework',
-            purpose: 'Core development',
-            implementation: 'Feature implementation',
-            required: true
-          }
-        ]
-      }
-    ];
-  }
-
-  /**
-   * Generate infrastructure deliverables
-   */
-  private generateInfrastructureDeliverables(
-    components: Array<{ name: string; description: string; type: string }>,
-    prd: PRD,
-    domain: string
-  ): Deliverable[] {
-    const deliverables: Deliverable[] = [];
-    
-    // Always include project setup
-    deliverables.push({
-      id: 'infrastructure-setup',
-      title: 'Project Infrastructure Setup',
-      description: 'Set up development environment, CI/CD pipeline, and deployment infrastructure',
-      category: 'Infrastructure',
-      priority: 'Critical',
-      estimatedHours: 16,
-      dependencies: [],
-      tasks: this.generateInfrastructureTasks(domain),
-      successCriteria: this.generateInfrastructureSuccessCriteria(),
-      status: 'Not Started'
-    });
-    
-    return deliverables;
-  }
-
-  /**
-   * Generate infrastructure tasks based on domain
-   */
-  private generateInfrastructureTasks(domain: string): Task[] {
-    if (domain === 'cryptocurrency-trading') {
-      return [
-        {
-          id: 'infra-task-1',
-          title: 'Set up Development Environment',
-          description: 'Configure local development environment with all necessary tools and dependencies',
-          instructions: [
-            'Set up Node.js and npm/yarn package management',
-            'Configure TypeScript with strict type checking',
-            'Set up React development environment with hot reloading',
-            'Configure ESLint and Prettier for code quality'
-          ],
-          estimatedHours: 4,
-          priority: 'Critical',
-          status: 'Not Started',
-          dependencies: [],
-          subtasks: [
-            {
-              id: 'subtask-1',
-              title: 'Node.js setup',
-              description: 'Install and configure Node.js environment',
-              completed: false,
-              estimatedMinutes: 60
-            },
-            {
-              id: 'subtask-2',
-              title: 'TypeScript configuration',
-              description: 'Set up TypeScript with proper configuration',
-              completed: false,
-              estimatedMinutes: 90
-            },
-            {
-              id: 'subtask-3',
-              title: 'React environment',
-              description: 'Configure React development setup',
-              completed: false,
-              estimatedMinutes: 60
-            },
-            {
-              id: 'subtask-4',
-              title: 'Code quality tools',
-              description: 'Set up linting and formatting tools',
-              completed: false,
-              estimatedMinutes: 30
-            }
-          ],
-          testingCriteria: {
-            unitTests: [],
-            integrationTests: [],
-            userAcceptanceTests: [
-              'Development server starts without errors',
-              'Hot reloading works correctly',
-              'TypeScript compilation succeeds'
-            ],
-            performanceTests: [
-              'Development build completes in under 30 seconds'
-            ],
-            securityTests: [],
-            accessibilityTests: [],
-            manualTests: [
-              'Manual verification of development environment'
-            ]
-          },
-          tools: [
-            {
-              name: 'Node.js',
-              purpose: 'JavaScript runtime',
-              implementation: 'Backend and build tools',
-              required: true
-            },
-            {
-              name: 'TypeScript',
-              purpose: 'Type safety',
-              implementation: 'Static type checking',
-              required: true
-            },
-            {
-              name: 'React',
-              purpose: 'Frontend framework',
-              implementation: 'User interface development',
-              required: true
-            }
-          ]
-        },
-        {
-          id: 'infra-task-2',
-          title: 'Configure Database Infrastructure',
-          description: 'Set up PostgreSQL for user data and InfluxDB for time-series market data',
-          instructions: [
-            'Set up PostgreSQL database with proper schema design',
-            'Configure InfluxDB for high-performance time-series data',
-            'Implement database connection pooling and optimization',
-            'Set up database migrations and backup strategies'
-          ],
-          estimatedHours: 6,
-          priority: 'High',
-          status: 'Not Started',
-          dependencies: ['infra-task-1'],
-          subtasks: [
-            {
-              id: 'subtask-1',
-              title: 'PostgreSQL setup',
-              description: 'Configure relational database',
-              completed: false,
-              estimatedMinutes: 120
-            },
-            {
-              id: 'subtask-2',
-              title: 'InfluxDB configuration',
-              description: 'Set up time-series database',
-              completed: false,
-              estimatedMinutes: 90
-            },
-            {
-              id: 'subtask-3',
-              title: 'Connection pooling',
-              description: 'Optimize database connections',
-              completed: false,
-              estimatedMinutes: 60
-            },
-            {
-              id: 'subtask-4',
-              title: 'Migration system',
-              description: 'Set up database migration tools',
-              completed: false,
-              estimatedMinutes: 90
-            }
-          ],
-          testingCriteria: {
-            unitTests: [
-              'Database connection functions',
-              'Migration scripts'
-            ],
-            integrationTests: [
-              'Database connectivity',
-              'Data persistence',
-              'Query performance'
-            ],
-            userAcceptanceTests: [
-              'Database accepts and retrieves data correctly',
-              'Migrations run without errors'
-            ],
-            performanceTests: [
-              'Query response time under 100ms',
-              'Connection pool efficiency'
-            ],
-            securityTests: [
-              'Database access controls',
-              'SQL injection prevention'
-            ],
-            accessibilityTests: [],
-            manualTests: [
-              'Manual database operation testing'
-            ]
-          },
-          tools: [
-            {
-              name: 'PostgreSQL',
-              purpose: 'Relational database',
-              implementation: 'User and application data storage',
-              required: true
-            },
-            {
-              name: 'InfluxDB',
-              purpose: 'Time-series database',
-              implementation: 'Market data storage',
-              required: true
-            },
-            {
-              name: 'Prisma',
-              purpose: 'Database ORM',
-              implementation: 'Type-safe database access',
-              required: true
-            }
-          ]
-        }
-      ];
-    }
-    
-    return [
-      {
-        id: 'infra-task-1',
-        title: 'Project Setup and Configuration',
-        description: 'Initialize project structure and development environment',
-        instructions: [
-          'Set up project repository and folder structure',
-          'Configure package.json with necessary dependencies',
-          'Set up development and build scripts',
-          'Configure environment variables and settings'
-        ],
-        estimatedHours: 4,
-        priority: 'Critical',
-        status: 'Not Started',
-        dependencies: [],
-        subtasks: [
-          {
-            id: 'subtask-1',
-            title: 'Repository setup',
-            description: 'Initialize git repository and project structure',
-            completed: false,
-            estimatedMinutes: 60
-          },
-          {
-            id: 'subtask-2',
-            title: 'Dependencies configuration',
-            description: 'Set up package.json and install dependencies',
-            completed: false,
-            estimatedMinutes: 90
-          }
-        ],
-        testingCriteria: {
-          unitTests: [],
-          integrationTests: [],
-          userAcceptanceTests: ['Project builds successfully'],
-          performanceTests: [],
-          securityTests: [],
-          accessibilityTests: [],
-          manualTests: ['Manual project setup verification']
-        },
-        tools: [
-          {
-            name: 'Git',
-            purpose: 'Version control',
-            implementation: 'Source code management',
-            required: true
-          }
-        ]
-      }
-    ];
-  }
-
-  // Helper methods
-  private containsKeywords(prd: PRD, keywords: string[]): boolean {
-    const content = `${prd.title} ${prd.description} ${prd.objectives.join(' ')}`.toLowerCase();
-    return keywords.some(keyword => content.includes(keyword.toLowerCase()));
-  }
-
-  private extractFeatureName(objective: string): string {
-    // Extract a clean feature name from objective
-    const words = objective.split(' ');
-    if (words.length <= 3) return objective;
-    
-    // Take first few meaningful words
-    const meaningfulWords = words.filter(word => 
-      !['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'].includes(word.toLowerCase())
-    );
-    
-    return meaningfulWords.slice(0, 3).join(' ');
-  }
-
-  private slugify(text: string): string {
-    return text
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  }
-
-  private calculatePhaseDependencies(featureIndex: number, phaseIndex: number, totalPhases: number): string[] {
-    const dependencies: string[] = [];
-    
-    // Previous phase in same feature
-    if (phaseIndex > 0) {
-      // This would need the actual feature name, but for now we'll keep it simple
-    }
-    
-    // Infrastructure dependency for first feature
-    if (featureIndex === 0 && phaseIndex === 0) {
-      dependencies.push('infrastructure-setup');
-    }
-    
-    return dependencies;
-  }
-
-  private generateFeatureSuccessCriteria(
-    feature: { name: string; description: string; category: string },
-    phase: { name: string; description: string; estimatedHours: number }
-  ): any {
-    return {
-      measurableMetrics: [
-        {
-          id: 'metric-functionality',
-          name: 'Feature Functionality',
-          description: `${feature.name} works as specified`,
-          type: 'boolean',
-          targetValue: true,
-          unit: '',
-          automated: false,
-          testingMethod: 'Manual testing and automated tests'
-        },
-        {
-          id: 'metric-performance',
-          name: 'Performance Benchmark',
-          description: `${phase.name} meets performance requirements`,
-          type: 'numerical',
-          targetValue: 200,
-          unit: 'ms',
-          automated: true,
-          testingMethod: 'Automated performance testing'
-        }
-      ],
-      qualitativeFactors: [
-        {
-          id: 'qual-usability',
-          name: 'User Experience Quality',
-          description: `${feature.name} provides excellent user experience`,
-          importance: 'High',
-          evaluationMethod: 'User testing and feedback',
-          criteria: ['Intuitive interface', 'Responsive design', 'Error handling'],
-          maxScore: 10
-        }
-      ],
-      testingRequirements: [
-        `All ${feature.name} functionality tested`,
-        'Performance benchmarks met',
-        'Security requirements validated'
-      ],
-      acceptanceCriteria: [
-        `${feature.name} works according to specifications`,
-        'All tests pass successfully',
-        'Code review completed and approved'
-      ]
-    };
-  }
-
-  private generateInfrastructureSuccessCriteria(): any {
-    return {
-      measurableMetrics: [
-        {
-          id: 'metric-setup-time',
-          name: 'Setup Completion Time',
-          description: 'Time to complete infrastructure setup',
-          type: 'numerical',
-          targetValue: 30,
-          unit: 'minutes',
-          automated: false,
-          testingMethod: 'Manual timing of setup process'
-        }
-      ],
-      qualitativeFactors: [
-        {
-          id: 'qual-reliability',
-          name: 'Infrastructure Reliability',
-          description: 'Stability and reliability of development environment',
-          importance: 'Critical',
-          evaluationMethod: 'Development team feedback',
-          criteria: ['Stable builds', 'Fast development cycles', 'Easy deployment'],
-          maxScore: 10
-        }
-      ],
-      testingRequirements: [
-        'All development tools working',
-        'Build process successful',
-        'Deployment pipeline functional'
-      ],
-      acceptanceCriteria: [
-        'Development environment fully functional',
-        'All team members can build and run project',
-        'CI/CD pipeline operational'
-      ]
-    };
-  }
-
-  // Existing helper methods (simplified versions)
   private analyzePRD(prd: PRD): ProjectAnalysis {
     const complexity = this.determineComplexity(prd);
     const estimatedDuration = this.estimateProjectDuration(prd);
@@ -1249,10 +893,39 @@ export class PRDService {
       complexity,
       estimatedDuration,
       riskLevel,
-      resourceRequirements: ['Full-stack Developer', 'DevOps Engineer', 'UI/UX Designer'],
-      technicalChallenges: ['Real-time data processing', 'Security implementation', 'Performance optimization'],
-      recommendations: ['Use microservices architecture', 'Implement comprehensive testing', 'Focus on security']
+      resourceRequirements: ['Full-stack Developer', 'UI/UX Designer'],
+      technicalChallenges: this.identifyTechnicalChallenges(prd),
+      recommendations: this.generateProjectRecommendations(prd, complexity)
     };
+  }
+
+  private identifyTechnicalChallenges(prd: PRD): string[] {
+    const challenges = [];
+    const content = `${prd.description} ${prd.objectives.join(' ')}`.toLowerCase();
+    
+    if (content.includes('real-time')) challenges.push('Real-time data processing');
+    if (content.includes('security') || content.includes('auth')) challenges.push('Security implementation');
+    if (content.includes('scale') || content.includes('performance')) challenges.push('Performance optimization');
+    if (content.includes('integration') || content.includes('api')) challenges.push('Third-party integrations');
+    
+    return challenges.length > 0 ? challenges : ['Standard web development challenges'];
+  }
+
+  private generateProjectRecommendations(prd: PRD, complexity: string): string[] {
+    const recommendations = ['Start with core functionality first'];
+    
+    if (complexity === 'Very High' || complexity === 'High') {
+      recommendations.push('Break down into smaller, testable components');
+      recommendations.push('Implement comprehensive testing strategy');
+    }
+    
+    if (this.containsKeywords(prd, ['real-time', 'trading', 'financial'])) {
+      recommendations.push('Prioritize security and data integrity');
+    }
+    
+    recommendations.push('Focus on user experience and performance');
+    
+    return recommendations;
   }
 
   private determineComplexity(prd: PRD): 'Low' | 'Medium' | 'High' | 'Very High' {
@@ -1261,7 +934,7 @@ export class PRDService {
       prd.stakeholders.length > 3,
       prd.risks.length > 3,
       prd.description.length > 500,
-      this.containsKeywords(prd, ['real-time', 'algorithm', 'trading', 'security'])
+      this.containsKeywords(prd, ['real-time', 'algorithm', 'trading', 'security', 'integration'])
     ];
     
     const score = factors.filter(Boolean).length;
@@ -1276,13 +949,13 @@ export class PRDService {
     const objectiveCount = prd.objectives.length;
     
     const baseWeeks = {
-      'Low': 4,
-      'Medium': 8,
-      'High': 16,
-      'Very High': 24
+      'Low': 3,
+      'Medium': 6,
+      'High': 12,
+      'Very High': 20
     }[complexity];
     
-    const adjustedWeeks = baseWeeks + Math.floor(objectiveCount / 2);
+    const adjustedWeeks = baseWeeks + Math.floor(objectiveCount / 3);
     
     if (adjustedWeeks <= 8) return `${adjustedWeeks} weeks`;
     return `${Math.ceil(adjustedWeeks / 4)} months`;
@@ -1290,21 +963,12 @@ export class PRDService {
 
   private assessRiskLevel(prd: PRD): 'Low' | 'Medium' | 'High' | 'Critical' {
     const riskCount = prd.risks.length;
-    const hasHighRiskKeywords = this.containsKeywords(prd, ['security', 'real-time', 'financial', 'trading']);
+    const hasHighRiskKeywords = this.containsKeywords(prd, ['security', 'real-time', 'financial', 'trading', 'integration']);
     
     if (riskCount >= 5 || hasHighRiskKeywords) return 'Critical';
     if (riskCount >= 3) return 'High';
     if (riskCount >= 1) return 'Medium';
     return 'Low';
-  }
-
-  private categorizeObjective(objective: string): string {
-    const lower = objective.toLowerCase();
-    if (lower.includes('auth') || lower.includes('login') || lower.includes('security')) return 'Authentication';
-    if (lower.includes('data') || lower.includes('api') || lower.includes('integration')) return 'Data Integration';
-    if (lower.includes('ui') || lower.includes('interface') || lower.includes('design')) return 'User Interface';
-    if (lower.includes('test') || lower.includes('quality')) return 'Testing';
-    return 'General';
   }
 }
 

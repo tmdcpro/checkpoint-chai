@@ -149,7 +149,7 @@ const TaskGenerator: React.FC<TaskGeneratorProps> = ({ prd, onTasksGenerated, on
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Deliverables per Objective
+                      Max Deliverables per Objective
                     </label>
                     <select
                       value={config.maxDeliverablesPerObjective}
@@ -159,21 +159,24 @@ const TaskGenerator: React.FC<TaskGeneratorProps> = ({ prd, onTasksGenerated, on
                       <option value={2}>2 (Focused)</option>
                       <option value={3}>3 (Balanced)</option>
                       <option value={4}>4 (Detailed)</option>
+                      <option value={5}>5 (Comprehensive)</option>
                     </select>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Tasks per Deliverable
+                      Max Tasks per Deliverable
                     </label>
                     <select
                       value={config.defaultTasksPerDeliverable}
                       onChange={(e) => setConfig({...config, defaultTasksPerDeliverable: parseInt(e.target.value)})}
                       className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                     >
-                      <option value={2}>2 (Minimal)</option>
-                      <option value={3}>3 (Standard)</option>
-                      <option value={4}>4 (Comprehensive)</option>
+                      <option value={2}>2 (Essential only)</option>
+                      <option value={3}>3 (Core tasks)</option>
+                      <option value={4}>4 (Detailed)</option>
+                      <option value={5}>5 (Comprehensive)</option>
+                      <option value={6}>6 (Maximum detail)</option>
                     </select>
                   </div>
                 </div>
@@ -186,7 +189,7 @@ const TaskGenerator: React.FC<TaskGeneratorProps> = ({ prd, onTasksGenerated, on
                       onChange={(e) => setConfig({...config, includeDetailedSubtasks: e.target.checked})}
                       className="rounded border-gray-300 dark:border-gray-600"
                     />
-                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Include detailed subtasks</span>
+                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Generate actionable subtasks</span>
                   </label>
                   
                   <label className="flex items-center">
@@ -196,7 +199,7 @@ const TaskGenerator: React.FC<TaskGeneratorProps> = ({ prd, onTasksGenerated, on
                       onChange={(e) => setConfig({...config, generateTestingCriteria: e.target.checked})}
                       className="rounded border-gray-300 dark:border-gray-600"
                     />
-                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Generate testing criteria</span>
+                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Include comprehensive testing</span>
                   </label>
                 </div>
               </div>
